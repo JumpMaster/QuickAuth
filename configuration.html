@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>PebbleAuth</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.0/jquery.mobile-1.4.0.min.css" />
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <script src="http://code.jquery.com/mobile/1.4.0/jquery.mobile-1.4.0.min.js"></script>
+  </head>
+  <body>
+    <div data-role="page" id="main">
+      <div data-role="header" class="jqm-header">
+        <h1>PebbleAuth</h1>
+      </div>
+
+      <div data-role="content">
+
+        <div data-role="fieldcontain">
+          <label for="name">Label:</label>
+          <textarea cols="40" rows="8" name="label" id="label"></textarea>
+        </div>
+		
+        <div data-role="fieldcontain">
+          <label for="name">Secret:</label>
+          <textarea cols="40" rows="8" name="secret" id="secret"></textarea>
+        </div>
+<!--
+        <div data-role="fieldcontain">
+          <label for="special-feature">Activate special feature:</label>
+          <select name="special-feature" id="special-feature" data-role="slider">
+            <option value="off">Off</option>
+            <option value="on">On</option>
+          </select>
+        </div>
+
+        <div data-role="fieldcontain">
+          <fieldset data-role="controlgroup">
+            <legend>Choose as many snacks as you'd like:</legend>
+            <input type="checkbox" name="checkbox-cheetos" id="checkbox-cheetos" class="custom" />
+            <label for="checkbox-cheetos">Cheetos</label>
+
+            <input type="checkbox" name="checkbox-doritos" id="checkbox-doritos" class="custom" />
+            <label for="checkbox-doritos">Doritos</label>
+
+            <input type="checkbox" name="checkbox-fritos" id="checkbox-fritos" class="custom" />
+            <label for="checkbox-fritos">Fritos</label>
+
+            <input type="checkbox" name="checkbox-sunchips" id="checkbox-sunchips" class="custom" />
+            <label for="checkbox-sunchips">Sun Chips</label>
+            </fieldset>
+          </div>
+        </div>
+-->
+        <div class="ui-body ui-body-b">
+          <fieldset class="ui-grid-a">
+              <div class="ui-block-a"><button type="submit" data-theme="d" id="b-cancel">Cancel</button></div>
+              <div class="ui-block-b"><button type="submit" data-theme="a" id="b-submit">Submit</button></div>
+            </fieldset>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function saveOptions() {
+        var options = {
+          'label': $("#label").val(),
+		  'secret': $("#secret").val()
+          //'special-feature': $("#special-feature").val(),
+          //'checkbox-cheetos': $("#checkbox-cheetos").is(':checked'),
+          //'checkbox-doritos': $("#checkbox-doritos").is(':checked'),
+          //'checkbox-fritos': $("#checkbox-fritos").is(':checked'),
+          //'checkbox-sunchips': $("#checkbox-sunchips").is(':checked')
+        }
+        return options;
+      }
+
+      $().ready(function() {
+        $("#b-cancel").click(function() {
+          console.log("Cancel");
+          document.location = "pebblejs://close";
+        });
+
+        $("#b-submit").click(function() {
+          console.log("Submit");
+
+          var location = "pebblejs://close#" + encodeURIComponent(JSON.stringify(saveOptions()));
+          console.log("Warping to: " + location);
+          console.log(location);
+          document.location = location;
+        });
+
+      });
+    </script>
+  </body>
+</html>
