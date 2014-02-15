@@ -1,10 +1,14 @@
 #include "pebble.h"
 #include "google-authenticator.c"
+#define MAX_OTP 8
+#define MAX_LABEL_LENGTH 6
+#define MAX_KEY_LENGTH 32
 
 Window *window;
 static TextLayer *countdown_layer;
 static TextLayer *text_pin_layer;
 static TextLayer *text_label_layer;
+static ActionBarLayer *action_bar_layer;
 
 static GRect text_pin_rect;
 static GRect text_label_rect;
@@ -12,10 +16,13 @@ static GRect text_label_rect;
 static GFont font_BITWISE_32;
 static GFont font_ORBITRON_28;
 
+// Some various bitmaps for actionbar-buttons
+static GBitmap *image_icon_yes;
+static GBitmap *image_icon_no;
+
 bool refresh_data = false;
 bool finish_refresh = true;
 
-int otpselected = 0;
 int timezone_offset = 0;
 
 enum {
@@ -23,17 +30,20 @@ enum {
 	PS_SECRET = 0x1,
 };
 
-int num_otp = 0;
-char otplabels[8][7];
-char otpkeys[8][33];
+int otp_count = 0;
+int otpselected = 0;
+char otplabels[MAX_OTP][MAX_LABEL_LENGTH+1];
+char otpkeys[MAX_OTP][MAX_KEY_LENGTH+1];
 
-char label_override_text[8] = "NO";
-char pin_override_text[8] = "SECRET";
+char label_override_text[MAX_LABEL_LENGTH+1] = "NO";
+char pin_override_text[MAX_LABEL_LENGTH+1] = "SECRET";
 
 enum {
-  JS_REQUEST_KEY = 0x0,
-  JS_RECEIVE_KEY = 0x1,
-  JS_TIMEZONE = 0x2,
+	JS_KEY_COUNT = 0x0,
+	JS_REQUEST_KEY = 0x1,
+	JS_TRANSMIT_KEY = 0x2,
+	JS_TIMEZONE = 0x3,
+	JS_DISPLAY_MESSAGE = 0x4
 };
 
 void expand_key(char *inputString)
@@ -41,31 +51,27 @@ void expand_key(char *inputString)
 	bool colonFound = false;
 	int outputChar = 0;
 	
-	for(unsigned int i = 0; i < strlen(inputString); i++)
-	{
-		if (inputString[i] == ':')
-		{
-			otplabels[num_otp][outputChar] = '\0';
+	for(unsigned int i = 0; i < strlen(inputString); i++) {
+		if (inputString[i] == ':') {
+			otplabels[otp_count][outputChar] = '\0';
 			colonFound = true;
 			outputChar = 0;
-		}
-		else
-		{
-			if (colonFound)
-				otpkeys[num_otp][outputChar] = inputString[i];
+		} else {
+			if (colonFound) 
+				otpkeys[otp_count][outputChar] = inputString[i]; 
 			else
-				otplabels[num_otp][outputChar] = inputString[i];
+				otplabels[otp_count][outputChar] = inputString[i];
 			
 			outputChar++;
 		}
 	}
-	otpkeys[num_otp][outputChar] = '\0';
+	otpkeys[otp_count][outputChar] = '\0';
 	
 	pin_override_text[0] = '\0';
 	label_override_text[0] = '\0';
 
-	num_otp++;
-	otpselected = num_otp-1;
+	otp_count++;
+	otpselected = otp_count-1;
 	refresh_data = true;
 }
 
@@ -113,7 +119,7 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 		}
 		
 		GRect finish = text_pin_rect;
-		finish.origin.y = 144;
+		finish.origin.y = 174;
 		animate_layer(text_layer_get_layer(text_pin_layer), AnimationCurveEaseIn, &text_pin_rect, &finish, 300, 500);
 	}
 	else if (finish_refresh || seconds == 0 || seconds == 30)
@@ -156,7 +162,7 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 
 void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
 
-	if (otpselected == (num_otp-1))
+	if (otpselected == (otp_count-1))
 		otpselected = 0;
 	else
 		otpselected++;
@@ -166,32 +172,54 @@ void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
 
 void down_single_click_handler(ClickRecognizerRef recognizer, void *context) {
 	if (otpselected == 0)
-		otpselected = (num_otp-1);
+		otpselected = (otp_count-1);
 	else
 		otpselected--;
 
 	refresh_data = true;
 }
+
 void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {
-  Tuplet request_tuple = TupletInteger(JS_REQUEST_KEY, 1);
-
-  DictionaryIterator *iter;
-  app_message_outbox_begin(&iter);
-
-  if (iter == NULL) {
-    return;
-  }
-
-  dict_write_tuplet(iter, &request_tuple);
-  dict_write_end(iter);
-
-  app_message_outbox_send();
+	Tuplet request_tuple = TupletInteger(JS_REQUEST_KEY, otp_count);
+	
+	DictionaryIterator *iter;
+	app_message_outbox_begin(&iter);
+	
+	if (iter == NULL) {
+		return;
+	}
+	
+	dict_write_tuplet(iter, &request_tuple);
+	dict_write_end(iter);
+	
+	app_message_outbox_send();
 }
 
-void config_provider(Window *window) {
+void select_long_click_handler(ClickRecognizerRef recognizer, void *context) {
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "Adding ActionBar");
+	action_bar_layer_add_to_window(action_bar_layer, window);
+	strcpy(pin_override_text, "DROP");
+	refresh_data = true;
+}
+
+void window_config_provider(Window *window) {
 	window_single_click_subscribe(BUTTON_ID_UP, up_single_click_handler);
 	window_single_click_subscribe(BUTTON_ID_DOWN, down_single_click_handler);
 	window_single_click_subscribe(BUTTON_ID_SELECT, select_single_click_handler);
+	window_long_click_subscribe(BUTTON_ID_SELECT, 750, select_long_click_handler, NULL);
+}
+
+void actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context) {
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "Removing ActionBar");
+	pin_override_text[0] = '\0';
+	action_bar_layer_remove_from_window(action_bar_layer);
+	window_set_click_config_provider(window, (ClickConfigProvider) window_config_provider);
+	refresh_data = true;
+}
+
+void actionbar_config_provider(void *context) {
+  window_single_click_subscribe(BUTTON_ID_DOWN, actionbar_up_click_handler);
+  //window_single_click_subscribe(BUTTON_ID_UP, (ClickHandler) my_previous_click_handler);
 }
 
 void out_sent_handler(DictionaryIterator *sent, void *context) {
@@ -205,12 +233,11 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "Outgoing Message Failed");
 }
 
-
 static void in_received_handler(DictionaryIterator *iter, void *context) {
 	// Check for fields you expect to receive
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "Message Recieved");
 	
-	Tuple *key_tuple = dict_find(iter, JS_RECEIVE_KEY);
+	Tuple *key_tuple = dict_find(iter, JS_TRANSMIT_KEY);
 	Tuple *timezone_tuple = dict_find(iter, JS_TIMEZONE);
 	
 	// Act on the found fields received
@@ -227,7 +254,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		if (tz_offset != timezone_offset)
 		{
 			timezone_offset = tz_offset;
-			refresh_data = true;	
+			refresh_data = true;
 		}
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "Int: %d", timezone_offset);
 	}
@@ -244,7 +271,7 @@ void load_persistent_data() {
 	if (persist_exists(PS_SECRET))
 	{
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "LOADING FROM WATCH");
-		for(int i = 0; i < 8; i++) {
+		for(int i = 0; i < MAX_OTP; i++) {
 			if (persist_exists(PS_SECRET+i)) {
 				char keylabelpair[40];
 				persist_read_string(PS_SECRET+i, keylabelpair, 40);
@@ -260,7 +287,7 @@ void save_persistent_data() {
 	persist_write_int(PS_TIMEZONE_KEY, timezone_offset);
 	
 	char buff[40];
-	for(int i = 0; i < 8; i++) {
+	for(int i = 0; i < MAX_OTP; i++) {
 		buff[0] = '\0';
 		if(strlen(otplabels[i])) {
 			strcat(buff,otplabels[i]);
@@ -284,7 +311,7 @@ void handle_init(void) {
 	text_layer_set_background_color(countdown_layer, GColorWhite);
 	layer_add_child(window_get_root_layer(window), text_layer_get_layer(countdown_layer));
 	
-	text_label_rect = GRect(5, 30, 140, 125);
+	text_label_rect = GRect(0, 30, bounds.size.w, 125);
 	GRect text_label_start_rect  = text_label_rect;
 	text_label_start_rect.origin.x = 144;
 	text_label_layer = text_layer_create(text_label_start_rect);
@@ -306,7 +333,7 @@ void handle_init(void) {
 	text_layer_set_font(text_pin_layer, font_BITWISE_32);
 	layer_add_child(window_get_root_layer(window), text_layer_get_layer(text_pin_layer));
 	
-	window_set_click_config_provider(window, (ClickConfigProvider) config_provider);
+	window_set_click_config_provider(window, (ClickConfigProvider) window_config_provider);
 	tick_timer_service_subscribe(SECOND_UNIT, &handle_second_tick);
 	
 	window_stack_push(window, true /* Animated */);
@@ -319,6 +346,16 @@ void handle_init(void) {
 	const uint32_t inbound_size = 128;
 	const uint32_t outbound_size = 64;
 	app_message_open(inbound_size, outbound_size);
+	
+	image_icon_yes = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_YES);
+	image_icon_no = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_NO);
+	
+	// Initialize the action bar:
+	action_bar_layer = action_bar_layer_create();
+	action_bar_layer_set_background_color(action_bar_layer, GColorWhite);
+	action_bar_layer_set_click_config_provider(action_bar_layer, actionbar_config_provider);
+	action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_UP, image_icon_yes);
+    action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_DOWN, image_icon_no);
 }
 
 void handle_deinit(void) {
@@ -327,6 +364,10 @@ void handle_deinit(void) {
 	animation_unschedule_all();
 	fonts_unload_custom_font(font_ORBITRON_28);
 	fonts_unload_custom_font(font_BITWISE_32);
+	// Cleanup the image
+  	gbitmap_destroy(image_icon_yes);
+	gbitmap_destroy(image_icon_no);
+	action_bar_layer_destroy(action_bar_layer);
 	text_layer_destroy(countdown_layer);
 	text_layer_destroy(text_label_layer);
 	text_layer_destroy(text_pin_layer);
