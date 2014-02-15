@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+        <head>
+                <title>PebbleAuth</title>
+                <meta charset='utf-8'>
+                <meta name='viewport' content='width=device-width, initial-scale=1'>
+                <link rel='stylesheet' href='http://code.jquery.com/mobile/1.3.2/jquery.mobile-1.3.2.min.css' />
+                <script src='http://code.jquery.com/jquery-1.9.1.min.js'></script>
+                <script src='http://code.jquery.com/mobile/1.3.2/jquery.mobile-1.3.2.min.js'></script>
+                <style>
+                        .ui-header .ui-title { margin-left: 1em; margin-right: 1em; text-overflow: clip; }
+                </style>
+        </head>
+  <body>
+<div data-role="page" id="page1">
+    <div data-theme="a" data-role="header" data-position="fixed">
+        <h3>
+            PebbleAuth Configuration
+        </h3>
+    </div>
+    <div id="keys" data-role="content">
+		<div data-role="fieldcontain"><label for="keyname">Name</label>
+			<input name="keyname" id="keyname" placeholder="" value="" data-mini="true" type="text">
+		</div>
+		<div data-role="fieldcontain"><label for="keysecret">Secret</label>
+			<input name="keysecret" id="keysecret" placeholder="" value="" data-mini="true" type="text">
+		</div>
+					
+		<div class="ui-grid-a">
+			<div class="ui-block-a">
+				<input id="cancel" type="submit" data-theme="c" data-icon="delete" data-iconpos="left" value="Cancel">
+			</div>
+			<div class="ui-block-b">
+				<input id="save" type="submit" data-theme="b" data-icon="check" data-iconpos="right" value="Save">
+			</div>
+		</div>
+	</div>
+</div>
+    <script>
+      function saveOptions() {
+        var options = {
+          'label': $("#keyname").val(),
+		  'secret': $("#keysecret").val().replace(/\s/g, '')
+        }
+        return options;
+      }
+
+      $().ready(function() {
+        $("#cancel").click(function() {
+          console.log("Cancel");
+          document.location = "pebblejs://close";
+        });
+
+        $("#save").click(function() {
+          console.log("Submit");
+
+          var location = "pebblejs://close#" + encodeURIComponent(JSON.stringify(saveOptions()));
+          console.log("Warping to: " + location);
+          console.log(location);
+          document.location = location;
+        });
+
+      });
+    </script>
+  </body>
+</html>
