@@ -18,14 +18,24 @@
             PebbleAuth Configuration
         </h3>
     </div>
-    <div id="keys" data-role="content">
+    <div id="settings" data-role="content">
 		<div data-role="fieldcontain"><label for="keyname">Name</label>
 			<input name="keyname" id="keyname" placeholder="" value="" data-mini="true" type="text">
 		</div>
 		<div data-role="fieldcontain"><label for="keysecret">Secret</label>
 			<input name="keysecret" id="keysecret" placeholder="" value="" data-mini="true" type="text">
 		</div>
-					
+	
+		<div id="theme" data-role="fieldcontain">			
+			<fieldset data-role="controlgroup" data-type="horizontal" data-mini="true">
+				<legend>Theme</legend>
+				<input id="format1" name="theme" value="0" data-theme="" type="radio" checked>
+				<label for="format1">Dark</label>
+				<input id="format2" name="theme" value="1" data-theme="" type="radio">
+				<label for="format2">Light</label>
+			</fieldset>
+		</div>
+		
 		<div class="ui-grid-a">
 			<div class="ui-block-a">
 				<input id="cancel" type="submit" data-theme="c" data-icon="delete" data-iconpos="left" value="Cancel">
@@ -40,7 +50,8 @@
       function saveOptions() {
         var options = {
           'label': $("#keyname").val(),
-		  'secret': $("#keysecret").val().replace(/\s/g, '')
+		  'secret': $("#keysecret").val().replace(/\s/g, ''),
+		  'theme': parseInt($("input[name=theme]:checked").val(), 10),
         }
         return options;
       }
@@ -59,7 +70,6 @@
           console.log(location);
           document.location = location;
         });
-
       });
     </script>
   </body>
