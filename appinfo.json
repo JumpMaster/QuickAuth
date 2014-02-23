@@ -22,6 +22,21 @@
     "resources": {
         "media": [
             {
+                "type": "font",
+                "name": "FONT_UNISPACE_20",
+                "file": "fonts/UNISPACE_20.ttf"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_ICON_YES",
+                "file": "images/Yes.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_ICON_NO",
+                "file": "images/No.png"
+            },
+            {
                 "menuIcon": true,
                 "type": "png",
                 "name": "IMAGE_ICON",

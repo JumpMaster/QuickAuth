@@ -2,7 +2,6 @@
 #include "base32.h"
 #include "hmac.h"
 #include "sha1.h"
-#include "mini-printf.h"
 
 #define SECRET_BITS               80          // Must be divisible by eight
 #define VERIFICATION_CODE_MODULUS (1000*1000) // Six digits

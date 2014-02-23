@@ -1,5 +1,6 @@
 #include "pebble.h"
 #include "google-authenticator.c"
+
 #define MAX_OTP 8
 #define MAX_LABEL_LENGTH 7 // 6 + termination
 #define MAX_KEY_LENGTH 33 // 32 + termination
@@ -11,23 +12,31 @@ static TextLayer *countdown_layer;
 static TextLayer *text_pin_layer;
 static TextLayer *text_label_layer;
 
-// Selection Window
-Window *select_window;
-// This is a simple menu layer
-static SimpleMenuLayer *key_menu_layer;
-// A simple menu layer can have multiple sections
-static SimpleMenuSection key_menu_sections[1];
-// Each section is composed of a number of menu items
-static SimpleMenuItem key_menu_items[MAX_OTP];
-
 static GRect text_pin_rect;
 static GRect text_label_rect;
+
+
+// Selection Window
+Window *select_window;
+static SimpleMenuLayer *key_menu_layer;
+static SimpleMenuSection key_menu_sections[1];
+static SimpleMenuItem key_menu_items[MAX_OTP];
+
+
+// Details Window
+Window *details_window;
+static TextLayer *details_title_layer;
+static TextLayer *details_key_layer;
+static ActionBarLayer *details_action_bar_layer;
+static GBitmap *image_icon_yes;
+static GBitmap *image_icon_no;
 
 static GColor bg_color;
 static GColor fg_color;
 
 static GFont font_BITWISE_32;
 static GFont font_ORBITRON_28;
+static GFont font_UNISPACE_20;
 
 bool loading_complete = false;
 bool refresh_data;
@@ -45,6 +54,7 @@ unsigned int otp_default = 0;
 char otp_labels[MAX_OTP][MAX_LABEL_LENGTH];
 char otp_keys[MAX_OTP][MAX_KEY_LENGTH];
 
+// Persistant Storage Keys
 enum {
 	PS_TIMEZONE_KEY,
 	PS_THEME,
@@ -52,17 +62,19 @@ enum {
 	PS_SECRET = 0x40 // Needs 8 spaces, should always be last
 };
 
+
+// JScript Keys
 enum {
 	JS_KEY_COUNT,
 	JS_REQUEST_KEY,
 	JS_TRANSMIT_KEY,
 	JS_TIMEZONE,
 	JS_DISPLAY_MESSAGE,
-	JS_THEME
+	JS_THEME,
+	JS_DELETE_KEY
 };
 
 void window_config_provider(Window *window);
-void actionbar_config_provider(void *context);
 
 void expand_key(char *inputString)
 {
@@ -242,9 +254,9 @@ void request_code(int code_id) {
 }
 
 static void key_menu_select_callback(int index, void *ctx) {
-	otp_default = index;
 	otp_selected = index;
 	refresh_data = true;
+	window_stack_push(details_window, true /* Animated */);
 }
 
 static void select_window_load(Window *window) {
@@ -278,6 +290,70 @@ static void select_window_load(Window *window) {
 
 void select_window_unload(Window *window) {
 	simple_menu_layer_destroy(key_menu_layer);
+}
+
+void details_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context) {
+	otp_default = otp_selected;
+	window_stack_remove(select_window, false);
+	window_stack_pop(true);
+}
+
+void details_actionbar_down_click_handler(ClickRecognizerRef recognizer, void *context) {
+}
+
+void details_actionbar_config_provider(void *context) {
+  window_single_click_subscribe(BUTTON_ID_UP, (ClickHandler) details_actionbar_up_click_handler);
+  window_single_click_subscribe(BUTTON_ID_DOWN, (ClickHandler) details_actionbar_down_click_handler);
+}
+
+
+static void details_window_load(Window *window) {
+	
+	Layer *details_window_layer = window_get_root_layer(details_window);
+	GRect bounds = layer_get_frame(details_window_layer);
+	
+	GRect title_text_rect = GRect(0, 0, bounds.size.w, 125);	
+	details_title_layer = text_layer_create(title_text_rect);
+	text_layer_set_background_color(details_title_layer, GColorClear);
+	text_layer_set_text_alignment(details_title_layer, GTextAlignmentLeft);
+	text_layer_set_font(details_title_layer, font_ORBITRON_28);
+	layer_add_child(window_get_root_layer(details_window), text_layer_get_layer(details_title_layer));
+	
+	GRect key_text_rect = GRect(0, 50, 115, 125);
+	details_key_layer = text_layer_create(key_text_rect);
+	text_layer_set_background_color(details_key_layer, GColorClear);
+	text_layer_set_text_alignment(details_key_layer, GTextAlignmentLeft);
+
+	font_UNISPACE_20 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_UNISPACE_20));
+	text_layer_set_font(details_key_layer, font_UNISPACE_20);
+	layer_add_child(window_get_root_layer(details_window), text_layer_get_layer(details_key_layer));
+	
+	window_set_background_color(details_window, bg_color);
+	text_layer_set_text_color(details_title_layer, fg_color);
+	text_layer_set_text_color(details_key_layer, fg_color);
+	
+	text_layer_set_text(details_title_layer, otp_labels[otp_selected]);
+	text_layer_set_text(details_key_layer, otp_keys[otp_selected]);
+	
+	image_icon_yes = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_YES);
+	image_icon_no = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_NO);
+	
+	// Initialize the action bar:
+	details_action_bar_layer = action_bar_layer_create();
+	action_bar_layer_set_background_color(details_action_bar_layer, fg_color);
+	action_bar_layer_set_click_config_provider(details_action_bar_layer, details_actionbar_config_provider);
+	action_bar_layer_set_icon(details_action_bar_layer, BUTTON_ID_UP, image_icon_yes);
+	action_bar_layer_set_icon(details_action_bar_layer, BUTTON_ID_DOWN, image_icon_no);
+	action_bar_layer_add_to_window(details_action_bar_layer, details_window);
+}
+
+void details_window_unload(Window *window) {
+	action_bar_layer_destroy(details_action_bar_layer);
+	gbitmap_destroy(image_icon_yes);
+	gbitmap_destroy(image_icon_no);
+	text_layer_destroy(details_title_layer);
+	text_layer_destroy(details_key_layer);
+	fonts_unload_custom_font(font_UNISPACE_20);
 }
 
 void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {	
@@ -431,7 +507,6 @@ static void window_load(Window *window) {
 	text_label_layer = text_layer_create(text_label_start_rect);
 	text_layer_set_background_color(text_label_layer, GColorClear);
 	text_layer_set_text_alignment(text_label_layer, GTextAlignmentLeft);
-	font_ORBITRON_28 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORBITRON_28));
 	text_layer_set_font(text_label_layer, font_ORBITRON_28);
 	layer_add_child(window_get_root_layer(window), text_layer_get_layer(text_label_layer));
 	
@@ -441,7 +516,6 @@ static void window_load(Window *window) {
 	text_pin_layer = text_layer_create(text_pin_start_rect);
 	text_layer_set_background_color(text_pin_layer, GColorClear);
 	text_layer_set_text_alignment(text_pin_layer, GTextAlignmentCenter);
-	font_BITWISE_32 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BITWISE_32));
 	text_layer_set_font(text_pin_layer, font_BITWISE_32);
 	layer_add_child(window_get_root_layer(window), text_layer_get_layer(text_pin_layer));
 	
@@ -462,6 +536,9 @@ void window_unload(Window *window) {
 void handle_init(void) {
 	load_persistent_data();
 	
+	font_ORBITRON_28 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORBITRON_28));
+	font_BITWISE_32 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BITWISE_32));
+	
 	window = window_create();
 	window_set_window_handlers(window, (WindowHandlers) {
 		.load = window_load,
@@ -472,6 +549,12 @@ void handle_init(void) {
 	window_set_window_handlers(select_window, (WindowHandlers) {
 		.load = select_window_load,
 		.unload = select_window_unload,
+	});
+	
+	details_window = window_create();
+	window_set_window_handlers(details_window, (WindowHandlers) {
+		.load = details_window_load,
+		.unload = details_window_unload,
 	});
 	
 	window_stack_push(window, true /* Animated */);
@@ -491,6 +574,7 @@ void handle_deinit(void) {
 	animation_unschedule_all();
 	fonts_unload_custom_font(font_ORBITRON_28);
 	fonts_unload_custom_font(font_BITWISE_32);
+	window_destroy(details_window);
 	window_destroy(select_window);
 	window_destroy(window);
 }
