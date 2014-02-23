@@ -4,11 +4,21 @@
 #define MAX_LABEL_LENGTH 7 // 6 + termination
 #define MAX_KEY_LENGTH 33 // 32 + termination
 
+	
+// Main Window
 Window *window;
 static TextLayer *countdown_layer;
 static TextLayer *text_pin_layer;
 static TextLayer *text_label_layer;
-static ActionBarLayer *action_bar_layer;
+
+// Selection Window
+Window *select_window;
+// This is a simple menu layer
+static SimpleMenuLayer *key_menu_layer;
+// A simple menu layer can have multiple sections
+static SimpleMenuSection key_menu_sections[1];
+// Each section is composed of a number of menu items
+static SimpleMenuItem key_menu_items[MAX_OTP];
 
 static GRect text_pin_rect;
 static GRect text_label_rect;
@@ -19,14 +29,10 @@ static GColor fg_color;
 static GFont font_BITWISE_32;
 static GFont font_ORBITRON_28;
 
-// Some various bitmaps for actionbar-buttons
-static GBitmap *image_icon_yes;
-static GBitmap *image_icon_no;
-
 bool loading_complete = false;
-bool refresh_data = false;
-bool finish_refresh = true;
-bool requesting_codes = false;
+bool refresh_data;
+bool finish_refresh;
+bool requesting_codes;
 
 int timezone_offset = 0;
 unsigned int theme = 0;  // 0 = Dark, 1 = Light
@@ -34,18 +40,16 @@ unsigned int theme = 0;  // 0 = Dark, 1 = Light
 unsigned int phone_otp_count = 0;
 unsigned int otp_count = 0;
 unsigned int otp_selected = 0;
-unsigned int otp_default = 3;
+unsigned int otp_default = 0;
 
 char otp_labels[MAX_OTP][MAX_LABEL_LENGTH];
 char otp_keys[MAX_OTP][MAX_KEY_LENGTH];
 
-char label_override_text[MAX_LABEL_LENGTH] = "NO";
-char pin_override_text[MAX_LABEL_LENGTH] = "SECRET";
-
 enum {
 	PS_TIMEZONE_KEY,
 	PS_THEME,
-	PS_SECRET
+	PS_DEFAULT_KEY,
+	PS_SECRET = 0x40 // Needs 8 spaces, should always be last
 };
 
 enum {
@@ -87,7 +91,11 @@ void expand_key(char *inputString)
 	bool key_found = false;
 	for(unsigned int i = 0; i < otp_count; i++) {
 		if (strcmp(otp_key, otp_keys[i]) == 0)
+		{
 			key_found = true;
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "Code exists...relabeling");
+			strcpy(otp_labels[i], otp_label);
+		}
 	}
 			
 	if (!key_found)
@@ -96,16 +104,11 @@ void expand_key(char *inputString)
 		strcpy(otp_keys[otp_count], otp_key);
 		strcpy(otp_labels[otp_count], otp_label);
 		
-		pin_override_text[0] = '\0';
-		label_override_text[0] = '\0';
-	
 		otp_count++;
 		if (loading_complete) {
 			otp_selected = otp_count-1;
 			refresh_data = true;
 		}
-	} else {
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Code exists...skipping");
 	}
 	
 	if (requesting_codes && otp_count == phone_otp_count) {
@@ -114,14 +117,12 @@ void expand_key(char *inputString)
 	}
 }
 
-void on_animation_stopped(Animation *anim, bool finished, void *context)
-{
+void on_animation_stopped(Animation *anim, bool finished, void *context) {
 	//Free the memory used by the Animation
 	property_animation_destroy((PropertyAnimation*) anim);
 }
 
-void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *finish, int duration, int delay)
-{
+void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *finish, int duration, int delay) {
 	//Declare animation
 	PropertyAnimation *anim = property_animation_create_layer_frame(layer, start, finish);
 	
@@ -165,19 +166,21 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 	{
 		if (finish_refresh)
 		{
-			if(strlen(label_override_text))
-				text_layer_set_text(text_label_layer, label_override_text);
-			else
+			if (otp_count)
 				text_layer_set_text(text_label_layer, otp_labels[otp_selected]);
+			else
+				text_layer_set_text(text_label_layer, "NO");
+			
 			GRect start = text_label_rect;
 			start.origin.x = 144;
 			animate_layer(text_layer_get_layer(text_label_layer), AnimationCurveEaseOut, &start, &text_label_rect, 300, 0);
 			finish_refresh = false;
 		}
-		if(strlen(pin_override_text))
-			text_layer_set_text(text_pin_layer, pin_override_text);
-		else
+
+		if (otp_count)
 			text_layer_set_text(text_pin_layer, generateCode(otp_keys[otp_selected], timezone_offset));
+		else
+			text_layer_set_text(text_pin_layer, "SECRETS");
 			
 		
 		GRect start = text_pin_rect;
@@ -200,22 +203,25 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 }
 
 void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
-
-	if (otp_selected == (otp_count-1))
-		otp_selected = 0;
-	else
-		otp_selected++;
-
-	refresh_data = true;
+	if (otp_count) {
+		if (otp_selected == (otp_count-1))
+			otp_selected = 0;
+		else
+			otp_selected++;
+		
+		refresh_data = true;
+	}
 }
 
 void down_single_click_handler(ClickRecognizerRef recognizer, void *context) {
-	if (otp_selected == 0)
-		otp_selected = (otp_count-1);
-	else
-		otp_selected--;
-
-	refresh_data = true;
+	if (otp_count) {
+		if (otp_selected == 0)
+			otp_selected = (otp_count-1);
+		else
+			otp_selected--;
+		
+		refresh_data = true;
+	}
 }
 
 void request_code(int code_id) {
@@ -235,50 +241,58 @@ void request_code(int code_id) {
 	app_message_outbox_send();
 }
 
-void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {
-	request_code((int) otp_count+1);
-}
-
-void select_long_click_handler(ClickRecognizerRef recognizer, void *context) {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Adding ActionBar");
-	
-	// Initialize the action bar:
-	action_bar_layer = action_bar_layer_create();
-	action_bar_layer_set_background_color(action_bar_layer, fg_color);
-	action_bar_layer_set_click_config_provider(action_bar_layer, actionbar_config_provider);
-	action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_UP, image_icon_yes);
-    action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_DOWN, image_icon_no);
-	action_bar_layer_add_to_window(action_bar_layer, window);
-	
-	strcpy(pin_override_text, "DROP");
+static void key_menu_select_callback(int index, void *ctx) {
+	otp_default = index;
+	otp_selected = index;
 	refresh_data = true;
 }
 
-void actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context) {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Removing ActionBar");
-	pin_override_text[0] = '\0';
-	action_bar_layer_remove_from_window(action_bar_layer);
-	action_bar_layer_destroy(action_bar_layer);
-	window_set_click_config_provider(window, (ClickConfigProvider) window_config_provider);
-	refresh_data = true;
+static void select_window_load(Window *window) {
+
+	int num_menu_items = 0;
+	
+	
+	for(unsigned int i = 0; i < otp_count; i++) {
+		key_menu_items[num_menu_items++] = (SimpleMenuItem) {
+			.title = otp_labels[i],
+			.callback = key_menu_select_callback,
+			.subtitle = otp_keys[i],
+		};
+	}
+	
+	// Bind the menu items to the corresponding menu sections
+	key_menu_sections[0] = (SimpleMenuSection){
+		.num_items = num_menu_items,
+		.items = key_menu_items,
+	};
+
+	Layer *select_window_layer = window_get_root_layer(select_window);
+	GRect bounds = layer_get_frame(select_window_layer);
+	
+	// Initialize the simple menu layer
+	key_menu_layer = simple_menu_layer_create(bounds, select_window, key_menu_sections, 1, NULL);
+	
+	// Add it to the window for display
+	layer_add_child(select_window_layer, simple_menu_layer_get_layer(key_menu_layer));
+}
+
+void select_window_unload(Window *window) {
+	simple_menu_layer_destroy(key_menu_layer);
+}
+
+void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {	
+	window_stack_push(select_window, true /* Animated */);
 }
 
 void window_config_provider(Window *window) {
 	window_single_click_subscribe(BUTTON_ID_UP, up_single_click_handler);
 	window_single_click_subscribe(BUTTON_ID_DOWN, down_single_click_handler);
 	window_single_click_subscribe(BUTTON_ID_SELECT, select_single_click_handler);
-	window_long_click_subscribe(BUTTON_ID_SELECT, 750, select_long_click_handler, NULL);
-}
-
-void actionbar_config_provider(void *context) {
-  window_single_click_subscribe(BUTTON_ID_DOWN, actionbar_up_click_handler);
-  //window_single_click_subscribe(BUTTON_ID_UP, (ClickHandler) my_previous_click_handler);
 }
 
 void out_sent_handler(DictionaryIterator *sent, void *context) {
 	// outgoing message was delivered
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "Outgoing Message Delivered");
-	
 	
 	if (requesting_codes) {
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "REQUESTING ANOTHER!");
@@ -362,7 +376,8 @@ void in_dropped_handler(AppMessageResult reason, void *context) {
 void load_persistent_data() {
 	timezone_offset = persist_exists(PS_TIMEZONE_KEY) ? persist_read_int(PS_TIMEZONE_KEY) : 0;
 	theme = persist_exists(PS_THEME) ? persist_read_int(PS_THEME) : 0;
-	
+	otp_default = persist_exists(PS_DEFAULT_KEY) ? persist_read_int(PS_DEFAULT_KEY) : 0;
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "Default Key: %d", otp_default);
 	if (persist_exists(PS_SECRET))
 	{
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "LOADING FROM WATCH");
@@ -386,6 +401,7 @@ void load_persistent_data() {
 void save_persistent_data() {
 	persist_write_int(PS_TIMEZONE_KEY, timezone_offset);
 	persist_write_int(PS_THEME, theme);
+	persist_write_int(PS_DEFAULT_KEY, otp_default);
 	
 	char buff[40];
 	for(int i = 0; i < MAX_OTP; i++) {
@@ -400,15 +416,12 @@ void save_persistent_data() {
 	}
 }
 
-void handle_init(void) {
-	load_persistent_data();
-	
-	window = window_create();
+static void window_load(Window *window) {
 	window_set_click_config_provider(window, (ClickConfigProvider) window_config_provider);
 	
 	Layer *window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_frame(window_layer);
-
+	
 	countdown_layer = text_layer_create(GRect(0, bounds.size.h-10, 0, 10));
 	layer_add_child(window_get_root_layer(window), text_layer_get_layer(countdown_layer));
 	
@@ -435,6 +448,32 @@ void handle_init(void) {
 	tick_timer_service_subscribe(SECOND_UNIT, &handle_second_tick);
 	
 	set_theme();
+	
+	finish_refresh = true;
+}
+
+void window_unload(Window *window) {
+	tick_timer_service_unsubscribe();
+	text_layer_destroy(countdown_layer);
+	text_layer_destroy(text_label_layer);
+	text_layer_destroy(text_pin_layer);
+}
+
+void handle_init(void) {
+	load_persistent_data();
+	
+	window = window_create();
+	window_set_window_handlers(window, (WindowHandlers) {
+		.load = window_load,
+		.unload = window_unload,
+	});
+	
+	select_window = window_create();
+	window_set_window_handlers(select_window, (WindowHandlers) {
+		.load = select_window_load,
+		.unload = select_window_unload,
+	});
+	
 	window_stack_push(window, true /* Animated */);
 	
 	app_message_register_inbox_received(in_received_handler);
@@ -445,24 +484,14 @@ void handle_init(void) {
 	const uint32_t inbound_size = 128;
 	const uint32_t outbound_size = 64;
 	app_message_open(inbound_size, outbound_size);
-	
-	image_icon_yes = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_YES);
-	image_icon_no = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_NO);
 }
 
 void handle_deinit(void) {
 	save_persistent_data();
-	tick_timer_service_unsubscribe();
 	animation_unschedule_all();
 	fonts_unload_custom_font(font_ORBITRON_28);
 	fonts_unload_custom_font(font_BITWISE_32);
-	// Cleanup the image
-  	gbitmap_destroy(image_icon_yes);
-	gbitmap_destroy(image_icon_no);
-	action_bar_layer_destroy(action_bar_layer);
-	text_layer_destroy(countdown_layer);
-	text_layer_destroy(text_label_layer);
-	text_layer_destroy(text_pin_layer);
+	window_destroy(select_window);
 	window_destroy(window);
 }
 

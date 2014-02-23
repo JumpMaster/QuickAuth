@@ -22,16 +22,6 @@
     "resources": {
         "media": [
             {
-                "type": "png",
-                "name": "IMAGE_ICON_NO",
-                "file": "images/No.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_ICON_YES",
-                "file": "images/Yes.png"
-            },
-            {
                 "menuIcon": true,
                 "type": "png",
                 "name": "IMAGE_ICON",

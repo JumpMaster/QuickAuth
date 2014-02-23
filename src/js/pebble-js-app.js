@@ -11,12 +11,6 @@ if (!theme)
 Pebble.addEventListener("ready",
 							function(e) {
 								console.log("JavaScript app ready and running!");
-								
-								//otp_count = 4;
-								//localStorage.setItem("otp_count", otp_count);
-								//localStorage.removeItem("secret4");
-								//localStorage.removeItem("secret6");
-								//localStorage.removeItem("secret7");
 
 								// Send timezone and keycount to watch
 								Pebble.sendAppMessage({"key_count":otp_count, "theme":theme, "timezone":timezoneOffset});
@@ -45,8 +39,8 @@ Pebble.addEventListener("appmessage",
 							});
 
 Pebble.addEventListener('showConfiguration', function(e) {
-	Pebble.openURL('http://192.168.4.17');
-	//Pebble.openURL('http://htmlpreview.github.io/?https://github.com/JumpMaster/PebbleAuth/blob/master/html/configuration.html');
+	//Pebble.openURL('http://192.168.0.115');
+	Pebble.openURL('http://htmlpreview.github.io/?https://github.com/JumpMaster/PebbleAuth/blob/master/html/configuration.html');
 });
 
 Pebble.addEventListener("webviewclosed",
@@ -55,39 +49,42 @@ Pebble.addEventListener("webviewclosed",
 								var config ={};
 								
 								if(!isNaN(configuration.theme) && configuration.theme != theme) {
+									console.log("Theme changed");
+									
 									theme = configuration.theme;
 									localStorage.setItem("theme",theme);
 									config.theme = theme;
-									console.log("Theme changed...");
 								}
 								
-								if(otp_count < 8) {
-									if(configuration.label.length > 0 && configuration.secret.length > 0) {
-										console.log("Uploading codes...");
-										var secret = configuration.secret;
-										secret = secret.replace(/0/g,"O").replace(/1/g, "I").replace(/\+/g, '').replace(/\s/g, '').toUpperCase();
-										
-										// Check if secret exists
-										var blnKeyExists = false;
-										for (var i=0;i<otp_count;i++) {
-											var savedSecret = localStorage.getItem('secret_pair'+i);
-											if (savedSecret !== null && savedSecret.indexOf(secret) != -1)
-												blnKeyExists = true;
-										}
-										
-										if (!blnKeyExists) {
-											var secretPair = configuration.label + ":" + secret;
-											console.log("Uploading new key:"+secretPair);
-											localStorage.setItem('secret_pair'+otp_count,secretPair);
-											otp_count++;
-											localStorage.setItem("otp_count",otp_count);
+								if(configuration.label.length > 0 && configuration.secret.length > 0) {
+									var secret = configuration.secret.replace(/0/g,"O").replace(/1/g, "I").replace(/\+/g, '').replace(/\s/g, '').toUpperCase();
+									var secretPair = configuration.label + ":" + secret;
+									
+									var blnKeyExists = false;
+									for (var i=0;i<otp_count;i++) {
+										var savedSecret = localStorage.getItem('secret_pair'+i);
+										if (savedSecret !== null && savedSecret.indexOf(secret) != -1) {
+											console.log("Relabled code");
+											
+											blnKeyExists = true;
+											localStorage.setItem('secret_pair'+i,secretPair);
 											config.transmit_key = secretPair;
-										} else
-											console.log("Key exists, ignoring");
+										}
 									}
-								} else
-									console.log("Too many codes...");
-
+									
+									if(!blnKeyExists && otp_count < 8) {
+										console.log("New code");
+										
+										// Check if secret exists									
+										console.log("Uploading new key:"+secretPair);
+										localStorage.setItem('secret_pair'+otp_count,secretPair);
+										otp_count++;
+										localStorage.setItem("otp_count",otp_count);
+										config.transmit_key = secretPair;
+									} else
+										console.log("Code exists or Too many codes..."+otp_count);
+								}
+								console.log("Uploading config");
 								Pebble.sendAppMessage(config);
 							}
 						);
