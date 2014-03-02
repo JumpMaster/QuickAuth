@@ -7,6 +7,7 @@
         "show_message": 4,
         "request_key": 1,
         "theme": 5,
+        "delete_key": 6,
         "timezone": 3
     },
     "longName": "PebbleAuth",
@@ -22,6 +23,12 @@
     "resources": {
         "media": [
             {
+                "menuIcon": true,
+                "type": "png",
+                "name": "IMAGE_ICON",
+                "file": "images/auth_icon.png"
+            },
+            {
                 "type": "font",
                 "name": "FONT_UNISPACE_20",
                 "file": "fonts/UNISPACE_20.ttf"
@@ -35,12 +42,6 @@
                 "type": "png",
                 "name": "IMAGE_ICON_NO",
                 "file": "images/No.png"
-            },
-            {
-                "menuIcon": true,
-                "type": "png",
-                "name": "IMAGE_ICON",
-                "file": "images/auth_icon.png"
             },
             {
                 "type": "font",

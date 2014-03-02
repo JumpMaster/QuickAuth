@@ -3,9 +3,9 @@
 
 #define MAX_OTP 8
 #define MAX_LABEL_LENGTH 7 // 6 + termination
-#define MAX_KEY_LENGTH 33 // 32 + termination
+#define MAX_KEY_LENGTH 65 // 64 + termination
+#define DEBUG false
 
-	
 // Main Window
 Window *window;
 static TextLayer *countdown_layer;
@@ -15,13 +15,11 @@ static TextLayer *text_label_layer;
 static GRect text_pin_rect;
 static GRect text_label_rect;
 
-
 // Selection Window
 Window *select_window;
 static SimpleMenuLayer *key_menu_layer;
 static SimpleMenuSection key_menu_sections[1];
 static SimpleMenuItem key_menu_items[MAX_OTP];
-
 
 // Details Window
 Window *details_window;
@@ -30,6 +28,7 @@ static TextLayer *details_key_layer;
 static ActionBarLayer *details_action_bar_layer;
 static GBitmap *image_icon_yes;
 static GBitmap *image_icon_no;
+
 
 static GColor bg_color;
 static GColor fg_color;
@@ -42,6 +41,7 @@ bool loading_complete = false;
 bool refresh_data;
 bool finish_refresh;
 bool requesting_codes;
+int js_message_retry_count = 0;
 
 int timezone_offset = 0;
 unsigned int theme = 0;  // 0 = Dark, 1 = Light
@@ -62,7 +62,6 @@ enum {
 	PS_SECRET = 0x40 // Needs 8 spaces, should always be last
 };
 
-
 // JScript Keys
 enum {
 	JS_KEY_COUNT,
@@ -74,7 +73,9 @@ enum {
 	JS_DELETE_KEY
 };
 
+// define stubs
 void window_config_provider(Window *window);
+void request_code(int code_id);
 
 void expand_key(char *inputString)
 {
@@ -105,14 +106,16 @@ void expand_key(char *inputString)
 		if (strcmp(otp_key, otp_keys[i]) == 0)
 		{
 			key_found = true;
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "Code exists...relabeling");
+			if (DEBUG)
+				APP_LOG(APP_LOG_LEVEL_DEBUG, "Code exists...relabeling");
 			strcpy(otp_labels[i], otp_label);
 		}
 	}
 			
 	if (!key_found)
 	{
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Adding Code");
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "Adding Code");
 		strcpy(otp_keys[otp_count], otp_key);
 		strcpy(otp_labels[otp_count], otp_label);
 		
@@ -125,7 +128,8 @@ void expand_key(char *inputString)
 	
 	if (requesting_codes && otp_count == phone_otp_count) {
 		requesting_codes = false;
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "FINISHED REQUESTING");
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "FINISHED REQUESTING");
 	}
 }
 
@@ -216,17 +220,6 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 
 void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
 	if (otp_count) {
-		if (otp_selected == (otp_count-1))
-			otp_selected = 0;
-		else
-			otp_selected++;
-		
-		refresh_data = true;
-	}
-}
-
-void down_single_click_handler(ClickRecognizerRef recognizer, void *context) {
-	if (otp_count) {
 		if (otp_selected == 0)
 			otp_selected = (otp_count-1);
 		else
@@ -236,10 +229,18 @@ void down_single_click_handler(ClickRecognizerRef recognizer, void *context) {
 	}
 }
 
-void request_code(int code_id) {
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting code: %d", code_id);
-	Tuplet request_tuple = TupletInteger(JS_REQUEST_KEY, code_id);
-	
+void down_single_click_handler(ClickRecognizerRef recognizer, void *context) {
+	if (otp_count) {
+		if (otp_selected == (otp_count-1))
+			otp_selected = 0;
+		else
+			otp_selected++;
+		
+		refresh_data = true;
+	}
+}
+
+void sendJSMessage(Tuplet data_tuple) {
 	DictionaryIterator *iter;
 	app_message_outbox_begin(&iter);
 	
@@ -247,22 +248,36 @@ void request_code(int code_id) {
 		return;
 	}
 	
-	dict_write_tuplet(iter, &request_tuple);
+	dict_write_tuplet(iter, &data_tuple);
 	dict_write_end(iter);
 	
 	app_message_outbox_send();
 }
 
+void request_delete(char *delete_key) {
+	if (DEBUG)
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "Pebble Requesting delete: %s", delete_key);
+
+	sendJSMessage(TupletCString(JS_DELETE_KEY, delete_key));
+}
+
+void request_code(int code_id) {
+	if (DEBUG)
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting code: %d", code_id);
+
+	sendJSMessage(TupletInteger(JS_REQUEST_KEY, code_id));
+}
+
 static void key_menu_select_callback(int index, void *ctx) {
 	otp_selected = index;
 	refresh_data = true;
+	
 	window_stack_push(details_window, true /* Animated */);
 }
 
 static void select_window_load(Window *window) {
 
 	int num_menu_items = 0;
-	
 	
 	for(unsigned int i = 0; i < otp_count; i++) {
 		key_menu_items[num_menu_items++] = (SimpleMenuItem) {
@@ -294,16 +309,22 @@ void select_window_unload(Window *window) {
 
 void details_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context) {
 	otp_default = otp_selected;
+	
 	window_stack_remove(select_window, false);
 	window_stack_pop(true);
 }
 
 void details_actionbar_down_click_handler(ClickRecognizerRef recognizer, void *context) {
+
+	request_delete(otp_keys[otp_selected]);
+	
+	window_stack_remove(select_window, false);
+	window_stack_pop(true);
 }
 
 void details_actionbar_config_provider(void *context) {
-  window_single_click_subscribe(BUTTON_ID_UP, (ClickHandler) details_actionbar_up_click_handler);
-  window_single_click_subscribe(BUTTON_ID_DOWN, (ClickHandler) details_actionbar_down_click_handler);
+	window_single_click_subscribe(BUTTON_ID_UP, (ClickHandler) details_actionbar_up_click_handler);
+	window_single_click_subscribe(BUTTON_ID_DOWN, (ClickHandler) details_actionbar_down_click_handler);
 }
 
 
@@ -356,8 +377,9 @@ void details_window_unload(Window *window) {
 	fonts_unload_custom_font(font_UNISPACE_20);
 }
 
-void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {	
-	window_stack_push(select_window, true /* Animated */);
+void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {
+	if (otp_count)
+		window_stack_push(select_window, true /* Animated */);
 }
 
 void window_config_provider(Window *window) {
@@ -368,20 +390,29 @@ void window_config_provider(Window *window) {
 
 void out_sent_handler(DictionaryIterator *sent, void *context) {
 	// outgoing message was delivered
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Outgoing Message Delivered");
+	js_message_retry_count = 0;
 	
+	if (DEBUG)
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "Outgoing Message Delivered");
+		
 	if (requesting_codes) {
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "REQUESTING ANOTHER!");
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "REQUESTING ANOTHER!");
 		request_code(otp_count+1);
 	}
 }
 
-
 void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, void *context) {
 	// outgoing message failed
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "Outgoing Message Failed");
+	
+	if (requesting_codes && js_message_retry_count < 3) {
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "RETRY: REQUESTING ANOTHER!");
+		js_message_retry_count++;
+		request_code(otp_count+1);
+	}
 }
-
 
 void set_theme() { 
 	if (theme) {
@@ -400,20 +431,24 @@ void set_theme() {
 
 static void in_received_handler(DictionaryIterator *iter, void *context) {
 	// Check for fields you expect to receive
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Message Recieved");
+	if (DEBUG)
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "Message Recieved");
 	
 	Tuple *key_count_tuple = dict_find(iter, JS_KEY_COUNT);
 	Tuple *key_tuple = dict_find(iter, JS_TRANSMIT_KEY);
+	Tuple *key_delete_tuple = dict_find(iter, JS_DELETE_KEY);
 	Tuple *timezone_tuple = dict_find(iter, JS_TIMEZONE);
 	Tuple *theme_tuple = dict_find(iter, JS_THEME);
 	
 	// Act on the found fields received
 	if (key_count_tuple) {
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Key count from phone: %d", key_count_tuple->value->int16);
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "Key count from phone: %d", key_count_tuple->value->int16);
 		phone_otp_count = key_count_tuple->value->int16;
 		
 		if (otp_count == 0 && phone_otp_count > 0) {
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "REQUESTING CODES!!!");
+			if (DEBUG)
+				APP_LOG(APP_LOG_LEVEL_DEBUG, "REQUESTING CODES!!!");
 			requesting_codes = true;
 			request_code(otp_count+1);
 		}
@@ -421,46 +456,75 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 	if (key_tuple) {
 		char key_value[40];
 		memcpy(key_value, key_tuple->value->cstring, key_tuple->length);
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Text: %s", key_value);
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "Text: %s", key_value);
 		expand_key(key_value);
 	}
 	
-	if (timezone_tuple)
-	{
+	if (key_delete_tuple) {
+		char key_value[40];
+		memcpy(key_value, key_delete_tuple->value->cstring, key_delete_tuple->length);
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "Deleting requested Key: %s", key_value);
+		
+		unsigned int key_found = MAX_OTP+1;
+		for(unsigned int i = 0; i < otp_count; i++) {
+			if (strcmp(key_value, otp_keys[i]) == 0)
+				key_found = i;
+		}
+		
+		if(key_found < MAX_OTP+1) {
+			for (int i = key_found; i < MAX_OTP; ++i) {
+				strcpy(otp_keys[i], otp_keys[i+1]);
+				strcpy(otp_labels[i], otp_labels[i+1]);
+			}
+			
+			otp_count--;
+			if (otp_default && key_found <= otp_default)
+				otp_default--;
+			
+			otp_selected = otp_default;
+			refresh_data = true;
+		}
+	}
+	
+	if (timezone_tuple) {
 		int tz_offset = timezone_tuple->value->int16;
-		if (tz_offset != timezone_offset)
-		{
+		if (tz_offset != timezone_offset) {
 			timezone_offset = tz_offset;
 			refresh_data = true;
 		}
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Timezone Offset: %d", timezone_offset);
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "Timezone Offset: %d", timezone_offset);
 	}
 	
-	if (theme_tuple)
-	{
+	if (theme_tuple) {
 		theme = theme_tuple->value->int16;
 		set_theme();
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Theme: %d", theme);
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "Theme: %d", theme);
 	}
 }
 
 void in_dropped_handler(AppMessageResult reason, void *context) {
 	// incoming message dropped
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Incoming Message Dropped");
+	if (DEBUG)
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "Incoming Message Dropped");
 }
 
 void load_persistent_data() {
 	timezone_offset = persist_exists(PS_TIMEZONE_KEY) ? persist_read_int(PS_TIMEZONE_KEY) : 0;
 	theme = persist_exists(PS_THEME) ? persist_read_int(PS_THEME) : 0;
 	otp_default = persist_exists(PS_DEFAULT_KEY) ? persist_read_int(PS_DEFAULT_KEY) : 0;
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Default Key: %d", otp_default);
-	if (persist_exists(PS_SECRET))
-	{
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "LOADING FROM WATCH");
+	if (DEBUG)
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "Default Key: %d", otp_default);
+	if (persist_exists(PS_SECRET)) {
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "LOADING FROM WATCH");
 		for(int i = 0; i < MAX_OTP; i++) {
 			if (persist_exists(PS_SECRET+i)) {
-				char keylabelpair[40];
-				persist_read_string(PS_SECRET+i, keylabelpair, 40);
+				char keylabelpair[MAX_LABEL_LENGTH+MAX_KEY_LENGTH];
+				persist_read_string(PS_SECRET+i, keylabelpair, MAX_LABEL_LENGTH+MAX_KEY_LENGTH);
 				expand_key(keylabelpair);
 			}
 			else
@@ -479,16 +543,20 @@ void save_persistent_data() {
 	persist_write_int(PS_THEME, theme);
 	persist_write_int(PS_DEFAULT_KEY, otp_default);
 	
-	char buff[40];
-	for(int i = 0; i < MAX_OTP; i++) {
+	char buff[MAX_LABEL_LENGTH+MAX_KEY_LENGTH];
+	for(unsigned int i = 0; i < MAX_OTP; i++) {
 		buff[0] = '\0';
-		if(strlen(otp_labels[i])) {
+		//if(strlen(otp_labels[i])) {
+		if (i < otp_count) {
 			strcat(buff,otp_labels[i]);
 			strcat(buff,":");
 			strcat(buff,otp_keys[i]);
-			APP_LOG(APP_LOG_LEVEL_DEBUG, buff);
+			if (DEBUG)
+				APP_LOG(APP_LOG_LEVEL_DEBUG, buff);
 			persist_write_string(PS_SECRET+i, buff);
-		}
+		} 
+		else
+			persist_delete(PS_SECRET+i);
 	}
 }
 
@@ -565,7 +633,7 @@ void handle_init(void) {
 	app_message_register_outbox_failed(out_failed_handler);
 	
 	const uint32_t inbound_size = 128;
-	const uint32_t outbound_size = 64;
+	const uint32_t outbound_size = 128;
 	app_message_open(inbound_size, outbound_size);
 }
 
