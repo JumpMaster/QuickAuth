@@ -280,11 +280,19 @@ static void select_window_load(Window *window) {
 	int num_menu_items = 0;
 	
 	for(unsigned int i = 0; i < otp_count; i++) {
-		key_menu_items[num_menu_items++] = (SimpleMenuItem) {
-			.title = otp_labels[i],
-			.callback = key_menu_select_callback,
-			.subtitle = otp_keys[i],
-		};
+		if (DEBUG) {
+			key_menu_items[num_menu_items++] = (SimpleMenuItem) {
+				.title = otp_labels[i],
+				.callback = key_menu_select_callback,
+				.subtitle = otp_keys[i],
+			};
+		}
+		else {
+			key_menu_items[num_menu_items++] = (SimpleMenuItem) {
+				.title = otp_labels[i],
+				.callback = key_menu_select_callback,
+			};
+		}
 	}
 	
 	// Bind the menu items to the corresponding menu sections
@@ -333,28 +341,34 @@ static void details_window_load(Window *window) {
 	Layer *details_window_layer = window_get_root_layer(details_window);
 	GRect bounds = layer_get_frame(details_window_layer);
 	
-	GRect title_text_rect = GRect(0, 0, bounds.size.w, 125);	
+	GRect title_text_rect;
+	
+	if (DEBUG) {
+		GRect key_text_rect = GRect(0, 50, 115, 125);
+		details_key_layer = text_layer_create(key_text_rect);
+		text_layer_set_background_color(details_key_layer, GColorClear);
+		text_layer_set_text_alignment(details_key_layer, GTextAlignmentLeft);
+		
+		font_UNISPACE_20 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_UNISPACE_20));
+		text_layer_set_font(details_key_layer, font_UNISPACE_20);
+		layer_add_child(window_get_root_layer(details_window), text_layer_get_layer(details_key_layer));
+		text_layer_set_text_color(details_key_layer, fg_color);
+		text_layer_set_text(details_key_layer, otp_keys[otp_selected]);
+		title_text_rect = GRect(0, 0, bounds.size.w, 125);
+	} else
+		title_text_rect = GRect(0, 55, bounds.size.w, 125);
+		
 	details_title_layer = text_layer_create(title_text_rect);
 	text_layer_set_background_color(details_title_layer, GColorClear);
 	text_layer_set_text_alignment(details_title_layer, GTextAlignmentLeft);
 	text_layer_set_font(details_title_layer, font_ORBITRON_28);
 	layer_add_child(window_get_root_layer(details_window), text_layer_get_layer(details_title_layer));
-	
-	GRect key_text_rect = GRect(0, 50, 115, 125);
-	details_key_layer = text_layer_create(key_text_rect);
-	text_layer_set_background_color(details_key_layer, GColorClear);
-	text_layer_set_text_alignment(details_key_layer, GTextAlignmentLeft);
 
-	font_UNISPACE_20 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_UNISPACE_20));
-	text_layer_set_font(details_key_layer, font_UNISPACE_20);
-	layer_add_child(window_get_root_layer(details_window), text_layer_get_layer(details_key_layer));
 	
 	window_set_background_color(details_window, bg_color);
 	text_layer_set_text_color(details_title_layer, fg_color);
-	text_layer_set_text_color(details_key_layer, fg_color);
 	
 	text_layer_set_text(details_title_layer, otp_labels[otp_selected]);
-	text_layer_set_text(details_key_layer, otp_keys[otp_selected]);
 	
 	image_icon_yes = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_YES);
 	image_icon_no = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_NO);

@@ -23,15 +23,15 @@
     "resources": {
         "media": [
             {
+                "type": "font",
+                "name": "FONT_UNISPACE_20",
+                "file": "fonts/UNISPACE_20.ttf"
+            },
+            {
                 "menuIcon": true,
                 "type": "png",
                 "name": "IMAGE_ICON",
                 "file": "images/auth_icon.png"
-            },
-            {
-                "type": "font",
-                "name": "FONT_UNISPACE_20",
-                "file": "fonts/UNISPACE_20.ttf"
             },
             {
                 "type": "png",

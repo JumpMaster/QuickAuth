@@ -88,7 +88,7 @@ Pebble.addEventListener("appmessage",
 							});
 
 Pebble.addEventListener('showConfiguration', function(e) {
-	Pebble.openURL('http://oncloudvirtual.com/pebble/pebbleauth/');
+	Pebble.openURL('http://oncloudvirtual.com/pebble/pebbleauth/?otp_count='+otp_count);
 });
 
 Pebble.addEventListener("webviewclosed",
