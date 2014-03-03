@@ -14,9 +14,9 @@
   <body>
 <div data-role="page" id="page1">
     <div data-theme="a" data-role="header" data-position="fixed">
-        <h3>
+        <h1>
             PebbleAuth Configuration
-        </h3>
+        </h1>
     </div>
     <div id="settings" data-role="content">
 		<div data-role="fieldcontain"><label for="keyname">Name</label>
@@ -45,8 +45,24 @@
 			</div>
 		</div>
 	</div>
+    <div id="footer" data-theme="c" data-role="footer" data-position="fixed">
+        <h3>
+            You have NUM_SPACES spaces remaining
+        </h3>
+    </div>
 </div>
     <script>
+		function queryObj() {
+			var result = {}, keyValuePairs = location.search.slice(1).split('&');
+
+			keyValuePairs.forEach(function(keyValuePair) {
+				keyValuePair = keyValuePair.split('=');
+				result[keyValuePair[0]] = keyValuePair[1] || '';
+			});
+
+			return result;
+		}
+		
 		// Base32 decoder from https://github.com/agnoster/base32-js/blob/master/lib/base32.js by Isaac Wolkerstorfer
 		var alphabet = '0123456789abcdefghjkmnpqrtuvwxyz'
 		var alias = { o:0, i:1, l:1, s:5 }
@@ -146,6 +162,14 @@
 		}
 
 		$().ready(function() {
+			var otp_count = 8 - queryObj()["otp_count"];
+			
+			if (otp_count === 0) {
+				document.getElementById("keyname").disabled=true;
+				document.getElementById("keysecret").disabled=true;
+			}
+			document.getElementById("footer").innerHTML=document.getElementById("footer").innerHTML.replace("NUM_SPACES", otp_count);
+			
 			$("#cancel").click(function() {
 			  console.log("Cancel");
 			  document.location = "pebblejs://close";
