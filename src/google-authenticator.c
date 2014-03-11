@@ -1,3 +1,25 @@
+// Helper program to generate a new secret for use in two-factor
+// authentication.
+//
+// Copyright 2010 Google Inc.
+// Author: Markus Gutschke
+//
+// Adapted for the Pebble Smartwatch
+// Author: Kevin Cooper
+// https://github.com/JumpMaster/PebbleAuth
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "pebble.h"
 #include "base32.h"
 #include "hmac.h"
@@ -26,8 +48,7 @@ static char *generateCode(const char *key, int timezone_offset) {
 	// Sanity check, that our secret will fixed into a reasonably-sized static
 	// array.
 	if (secretLen <= 0 || secretLen > 100) {
-		//return -1;
-		return "";
+		return "FAILED";
 	}
 	
 	// Decode secret from Base32 to a binary representation, and check that we
@@ -35,7 +56,7 @@ static char *generateCode(const char *key, int timezone_offset) {
 	uint8_t secret[100];
 	if ((secretLen = base32_decode((const uint8_t *)key, secret, secretLen))<1) {
 		//return -1;
-		return "";
+		return "FAILED";
 	}
 	
 	// Compute the HMAC_SHA1 of the secrete and the challenge.

@@ -1,28 +1,38 @@
-var MAX_OTP = 8;
-var otp_count = parseInt(localStorage.getItem("otp_count"));
-var theme = parseInt(localStorage.getItem("theme"));
-var timezoneOffset = new Date().getTimezoneOffset();
+var MAX_OTP = 16;
+var otp_count = 0;
+var theme = 0;
+var timezoneOffset = 0;
+var message_send_retries = 0;
+var message_send_max_retries = 5;
+var app_version = 2;
 var debug = false;
 
-if (!otp_count)
-	otp_count = 0;
-
-if (!theme)
-	theme = 0;
+function loadLocalVariables() {
+	otp_count = parseInt(localStorage.getItem("otp_count"));
+	theme = parseInt(localStorage.getItem("theme"));
+	timezoneOffset = new Date().getTimezoneOffset();
+}
 
 function sendAppMessage(data) {
 	Pebble.sendAppMessage(data,
-							function(e) {
+						function(e) { // SUCCESS
+							if (debug)
+								console.log("Successfully delivered message with transactionId=" + e.data.transactionId);
+							message_send_retries = 0;
+						}, function(e) { // FAILURE
+							if (debug)
+								console.log("Unable to deliver message with transactionId=" + e.data.transactionId + " Error is: " + e.error.message);
+							if (message_send_retries <= message_send_max_retries) {
+								message_send_retries++;
 								if (debug)
-									console.log("Successfully delivered message with transactionId=" + e.data.transactionId);
-							},
-							function(e) {
+									console.log("Retry: " + message_send_retries);
+								sendAppMessage(data);
+							} else {
 								if (debug)
-									console.log("Unable to deliver message with transactionId=" +
-												e.data.transactionId +
-												" Error is: " + e.error.message);
+									console.log("All retries failed");
+								message_send_retries = 0;
 							}
-						);
+						});
 }
 
 Pebble.addEventListener("ready",
@@ -30,6 +40,9 @@ Pebble.addEventListener("ready",
 								if (debug)
 									console.log("JavaScript app ready and running!");
 
+								// localStorage should only be accessed are the "ready" event is fired
+								loadLocalVariables();
+								
 								// Send timezone, keycount, and theme to watch
 								sendAppMessage({"key_count":otp_count, "theme":theme, "timezone":timezoneOffset});
 
@@ -88,7 +101,10 @@ Pebble.addEventListener("appmessage",
 							});
 
 Pebble.addEventListener('showConfiguration', function(e) {
-	Pebble.openURL('http://oncloudvirtual.com/pebble/pebbleauth/?otp_count='+otp_count);
+	var url = 'http://oncloudvirtual.com/pebble/pebbleauth/?version='+app_version+'&otp_count='+otp_count;
+	if (debug)
+		console.log(url);
+	Pebble.openURL(url);
 });
 
 Pebble.addEventListener("webviewclosed",
@@ -121,13 +137,10 @@ Pebble.addEventListener("webviewclosed",
 											config.transmit_key = secretPair;
 										}
 									}
-									if(!blnKeyExists && otp_count < 8) {
-										if (debug)
-											console.log("New code");
-										
-										// Check if secret exists
+									if(!blnKeyExists && otp_count < MAX_OTP) {
 										if (debug)
 											console.log("Uploading new key:"+secretPair);
+										
 										localStorage.setItem('secret_pair'+otp_count,secretPair);
 										otp_count++;
 										localStorage.setItem("otp_count",otp_count);
@@ -137,7 +150,7 @@ Pebble.addEventListener("webviewclosed",
 										if (debug)
 											console.log("Code exists, updating label");
 									}
-									else if (otp_count >= 8) {
+									else if (otp_count >= MAX_OTP) {
 										if (debug)
 											console.log("Too many codes..."+otp_count);
 									}
