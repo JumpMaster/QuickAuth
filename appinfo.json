@@ -1,5 +1,5 @@
 {
-    "versionLabel": "1.1",
+    "versionLabel": "1.1.1",
     "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
     "appKeys": {
         "transmit_key": 2,
@@ -11,7 +11,7 @@
         "timezone": 3
     },
     "longName": "PebbleAuth",
-    "versionCode": 2,
+    "versionCode": 3,
     "capabilities": [
         "configurable"
     ],
