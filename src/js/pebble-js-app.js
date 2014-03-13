@@ -11,6 +11,12 @@ function loadLocalVariables() {
 	otp_count = parseInt(localStorage.getItem("otp_count"));
 	theme = parseInt(localStorage.getItem("theme"));
 	timezoneOffset = new Date().getTimezoneOffset();
+	
+	if (!otp_count)
+		otp_count = 0;
+	
+	if (!theme)
+		theme = 0;
 }
 
 function sendAppMessage(data) {
