@@ -1,22 +1,26 @@
 var MAX_OTP = 16;
+var MAX_LABEL_LENGTH = 20;
+var MAX_KEY_LENGTH = 64;
+
 var otp_count = 0;
 var theme = 0;
+var font_style = 0;
 var timezoneOffset = 0;
 var message_send_retries = 0;
 var message_send_max_retries = 5;
-var app_version = 3;
+var app_version = 4;
 var debug = false;
 
 function loadLocalVariables() {
 	otp_count = parseInt(localStorage.getItem("otp_count"));
 	theme = parseInt(localStorage.getItem("theme"));
+	font_style = parseInt(localStorage.getItem("font_style"));
+	
 	timezoneOffset = new Date().getTimezoneOffset();
 	
-	if (!otp_count)
-		otp_count = 0;
-	
-	if (!theme)
-		theme = 0;
+	otp_count = !otp_count ? 0 : otp_count;
+	theme = !theme ? 0 : theme;
+	font_style = !font_style ? 0 : font_style;
 }
 
 function sendAppMessage(data) {
@@ -50,12 +54,18 @@ Pebble.addEventListener("ready",
 								loadLocalVariables();
 								
 								// Send timezone, keycount, and theme to watch
-								sendAppMessage({"key_count":otp_count, "theme":theme, "timezone":timezoneOffset});
+								sendAppMessage({
+									"key_count":otp_count, 
+									"theme":theme, 
+									"timezone":timezoneOffset,
+									"font_style":font_style
+									});
 
 								if (debug) {
 									console.log("otp_count="+otp_count);
 									console.log("theme="+theme);
 									console.log("timezoneOffset="+timezoneOffset);
+									console.log("font_style="+font_style);
 								}
 							}
 						);
@@ -107,7 +117,12 @@ Pebble.addEventListener("appmessage",
 							});
 
 Pebble.addEventListener('showConfiguration', function(e) {
-	var url = 'http://oncloudvirtual.com/pebble/pebbleauth/?version='+app_version+'&otp_count='+otp_count;
+	var url = 'http://oncloudvirtual.com/pebble/pebbleauth/v'+
+		app_version+'/'+
+		'?otp_count='+otp_count+
+		'&theme='+theme+
+		'&font_style='+font_style;
+	
 	if (debug)
 		console.log(url);
 	Pebble.openURL(url);
@@ -126,10 +141,28 @@ Pebble.addEventListener("webviewclosed",
 									localStorage.setItem("theme",theme);
 									config.theme = theme;
 								}
+								
+								if(!isNaN(configuration.font_style) && configuration.font_style != font_style) {
+									if (debug)
+										console.log("Font style changed:"+configuration.font_style);
+
+									font_style = configuration.font_style;
+									localStorage.setItem("font_style",font_style);
+									config.font_style = font_style;
+								}
 
 								if(configuration.label && configuration.secret) {
-									var secret = configuration.secret.replace(/0/g,"O").replace(/1/g, "I").replace(/\+/g, '').replace(/\s/g, '').toUpperCase();
-									var secretPair = configuration.label + ":" + secret;
+									var secret = configuration.secret
+										.replace(/0/g,"O")
+										.replace(/1/g, "I")
+										.replace(/\+/g, '')
+										.replace(/\s/g, '')
+										.toUpperCase()
+										.substring(0, MAX_KEY_LENGTH);
+									var label = configuration.label
+										.replace(/:/g, '')
+										.substring(0, MAX_LABEL_LENGTH);
+									var secretPair = label + ":" + secret;
 									
 									var blnKeyExists = false;
 									for (var i=0;i<otp_count;i++) {

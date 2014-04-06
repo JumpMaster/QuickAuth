@@ -6,10 +6,11 @@
 //
 
 #include "pebble.h"
+#include "main.h"
 #include "google-authenticator.c"
 
 #define MAX_OTP 16
-#define MAX_LABEL_LENGTH 7 // 6 + termination
+#define MAX_LABEL_LENGTH 21 // 20 + termination
 #define MAX_KEY_LENGTH 65 // 64 + termination
 #define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
 #define DEBUG false
@@ -42,15 +43,16 @@ static GColor bg_color;
 static GColor fg_color;
 
 // Fonts
-static GFont font_BITWISE_32;
-static GFont font_ORBITRON_28;
+static unsigned int font_style;
+static AppFont font_pin;
+static AppFont font_label;
 static GFont font_UNISPACE_20;
 
 bool perform_full_refresh = true;	// Start refreshing at launch
 bool finish_refresh = true;			// The text boxes are places offscreen to just whiz them back on
-bool requesting_codes;
-unsigned int details_selected_key = 0;
+bool fonts_changed;
 
+unsigned int details_selected_key = 0;
 unsigned int js_message_retry_count = 0;
 unsigned int js_message_max_retry_count = 5;
 
@@ -63,6 +65,7 @@ unsigned int otp_selected = 0;
 unsigned int otp_default = 0;
 unsigned int otp_update_tick = 0;
 unsigned int otp_updated_at_tick = 0;
+unsigned int requesting_code = 0;
 
 char otp_labels[MAX_OTP][MAX_LABEL_LENGTH];
 char otp_keys[MAX_OTP][MAX_KEY_LENGTH];
@@ -74,6 +77,7 @@ enum {
 	PS_TIMEZONE_KEY,
 	PS_THEME,
 	PS_DEFAULT_KEY,
+	PS_FONT_STYLE,
 	PS_SECRET = 0x40 // Needs 16 spaces, should always be last
 };
 
@@ -85,15 +89,17 @@ enum {
 	JS_TIMEZONE,
 	JS_DISPLAY_MESSAGE,
 	JS_THEME,
-	JS_DELETE_KEY
+	JS_DELETE_KEY,
+	JS_FONT_STYLE
 };
-
-// define stubs
-void window_config_provider(Window *window);
-void request_key(int code_id);
 
 void refresh_screen_data() {
 	perform_full_refresh = true;
+}
+
+void update_screen_fonts() {
+	fonts_changed = true;
+	refresh_screen_data();
 }
 
 void expand_key(char *inputString, bool new_code) {
@@ -124,13 +130,17 @@ void expand_key(char *inputString, bool new_code) {
 		for(unsigned int i = 0; i < watch_otp_count; i++) {
 			if (strcmp(otp_key, otp_keys[i]) == 0) {
 				updating_label = true;
-				if (DEBUG)
-					APP_LOG(APP_LOG_LEVEL_DEBUG, "Code exists. Relabeling\nSaving to location: %d", i);
+				if (DEBUG) {
+					APP_LOG(APP_LOG_LEVEL_DEBUG, "Code exists. Relabeling");
+					APP_LOG(APP_LOG_LEVEL_DEBUG, "Saving to location: %d", PS_SECRET+i);
+				}
 
 				strcpy(otp_labels[i], otp_label);
 				persist_write_string(PS_SECRET+i, inputString);
-				if (otp_selected == i)
-					refresh_screen_data();
+				if (otp_selected != i)
+					otp_selected = i;
+				
+				refresh_screen_data();
 			}
 		}
 	}
@@ -150,8 +160,8 @@ void expand_key(char *inputString, bool new_code) {
 		refresh_screen_data();
 	}
 	
-	if (requesting_codes && watch_otp_count == phone_otp_count) {
-		requesting_codes = false;
+	if (phone_otp_count > 0 && phone_otp_count < requesting_code) {
+		requesting_code = 0;
 		if (DEBUG)
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "FINISHED REQUESTING");
 	}
@@ -213,6 +223,11 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 			else
 				strcpy(label_text, "NO");
 			
+			if (fonts_changed) {
+				set_fonts();
+				fonts_changed = false;
+			}
+			
 			GRect start = text_label_rect;
 			start.origin.x = 144;
 			animate_layer(text_layer_get_layer(text_label_layer), AnimationCurveEaseOut, &start, &text_label_rect, 300, 0);
@@ -223,7 +238,7 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 			strcpy(pin_text, generateCode(otp_keys[otp_selected], timezone_offset));
 		else
 			strcpy(pin_text, "SECRETS");
-			
+		
 		otp_updated_at_tick = otp_update_tick;
 		finish_refresh = false;
 		
@@ -238,6 +253,7 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 	GRect start = layer_get_frame(text_layer_get_layer(countdown_layer));
 	GRect finish = (GRect(0, bounds.size.h-10, bounds.size.w, 10));
 	float boxsize = (30-(seconds%30))/((double)30);
+	
 	finish.size.w = finish.size.w * boxsize;
 	
 	if (seconds % 30 == 0)
@@ -343,6 +359,7 @@ void select_window_unload(Window *window) {
 
 void details_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context) {
 	otp_default = details_selected_key;
+	persist_write_int(PS_DEFAULT_KEY, otp_default);
 	
 	if (otp_selected != otp_default) {
 		otp_selected = otp_default;
@@ -384,14 +401,14 @@ static void details_window_load(Window *window) {
 		layer_add_child(details_window_layer, text_layer_get_layer(details_key_layer));
 		text_layer_set_text_color(details_key_layer, fg_color);
 		text_layer_set_text(details_key_layer, otp_keys[details_selected_key]);
-		title_text_rect = GRect(0, 0, bounds.size.w, 125);
+		title_text_rect = GRect(0, 0, bounds.size.w, 40);
 	} else
-		title_text_rect = GRect(0, 55, bounds.size.w, 125);
+		title_text_rect = GRect(0, 55, bounds.size.w, 40);
 		
 	details_title_layer = text_layer_create(title_text_rect);
 	text_layer_set_background_color(details_title_layer, GColorClear);
 	text_layer_set_text_alignment(details_title_layer, GTextAlignmentLeft);
-	text_layer_set_font(details_title_layer, font_ORBITRON_28);
+	text_layer_set_font(details_title_layer, font_label.font);
 	layer_add_child(details_window_layer, text_layer_get_layer(details_title_layer));
 
 	
@@ -439,10 +456,10 @@ void out_sent_handler(DictionaryIterator *sent, void *context) {
 	if (DEBUG)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "Outgoing Message Delivered");
 		
-	if (requesting_codes) {
+	if (requesting_code > 0) {
 		if (DEBUG)
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "REQUESTING ANOTHER!");
-		request_key(watch_otp_count+1);
+		request_key(requesting_code++);
 	}
 }
 
@@ -451,13 +468,13 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
 	if (DEBUG)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "Outgoing Message Failed");
 	
-	if (requesting_codes && js_message_retry_count < js_message_max_retry_count) {
+	if (requesting_code > 0 && js_message_retry_count < js_message_max_retry_count) {
 		js_message_retry_count++;
 		
 		if (DEBUG)
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "RETRY:%d REQUESTING ANOTHER!", js_message_retry_count);
 		
-		request_key(watch_otp_count+1);
+		request_key(requesting_code);
 	}
 }
 
@@ -476,6 +493,54 @@ void set_theme() {
 	text_layer_set_text_color(text_pin_layer, fg_color);
 }
 
+void set_fonts() {
+	if (font_label.isCustom)
+		fonts_unload_custom_font(font_label.font);
+
+	if (font_pin.isCustom)
+		fonts_unload_custom_font(font_pin.font);
+	
+	switch(font_style)
+	{
+		case 1 :
+			font_label.font = fonts_get_system_font(FONT_KEY_GOTHIC_24);
+			font_label.isCustom = false;
+			text_label_rect.origin.y = 38;
+			text_label_rect.size.h = 40;
+			font_pin.font = fonts_get_system_font(FONT_KEY_BITHAM_34_MEDIUM_NUMBERS);
+			font_pin.isCustom = false;
+			break;
+		case 2 :
+			font_label.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DIGITAL_28));
+			font_label.isCustom = true;
+			text_label_rect.origin.y = 38;
+			text_label_rect.size.h = 40;
+			font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DIGITAL_38));
+			font_pin.isCustom = true;
+			break;
+		case 3 :
+			font_label.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BD_CARTOON_20));
+			font_label.isCustom = true;
+			text_label_rect.origin.y = 32;
+			text_label_rect.size.h = 22;
+			font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BD_CARTOON_28));
+			font_pin.isCustom = true;
+			break;
+		default :
+			font_style = 0;
+			font_label.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORBITRON_28));
+			font_label.isCustom = true;
+			text_label_rect.origin.y = 30;
+			text_label_rect.size.h = 40;
+			font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BITWISE_32));
+			font_pin.isCustom = true;
+			break;
+	}
+
+	text_layer_set_font(text_label_layer, font_label.font);
+	text_layer_set_font(text_pin_layer, font_pin.font);
+}
+
 static void in_received_handler(DictionaryIterator *iter, void *context) {
 	// Check for fields you expect to receive
 	if (DEBUG)
@@ -486,18 +551,22 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 	Tuple *key_delete_tuple = dict_find(iter, JS_DELETE_KEY);
 	Tuple *timezone_tuple = dict_find(iter, JS_TIMEZONE);
 	Tuple *theme_tuple = dict_find(iter, JS_THEME);
+	Tuple *font_style_tuple = dict_find(iter, JS_FONT_STYLE);
 	
 	// Act on the found fields received
 	if (key_count_tuple) {
-		if (DEBUG)
+		if (DEBUG) {
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "Key count from watch: %d", watch_otp_count);
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "Key count from phone: %d", key_count_tuple->value->int16);
+		}
 		phone_otp_count = key_count_tuple->value->int16;
 		
-		if (watch_otp_count == 0 && phone_otp_count > 0) {
+		//if (watch_otp_count == 0 && phone_otp_count > 0) {
+		if (watch_otp_count < phone_otp_count) {
 			if (DEBUG)
 				APP_LOG(APP_LOG_LEVEL_DEBUG, "REQUESTING CODES!!!");
-			requesting_codes = true;
-			request_key(watch_otp_count+1);
+			requesting_code = 1;
+			request_key(requesting_code++);
 		}
 	} // key_count_tuple
 	
@@ -551,6 +620,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		int tz_offset = timezone_tuple->value->int16;
 		if (tz_offset != timezone_offset) {
 			timezone_offset = tz_offset;
+			persist_write_int(PS_TIMEZONE_KEY, timezone_offset);
 			refresh_screen_data();
 		}
 		if (DEBUG)
@@ -558,11 +628,26 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 	} // timezone_tuple
 	
 	if (theme_tuple) {
-		theme = theme_tuple->value->int16;
-		set_theme();
-		if (DEBUG)
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "Theme: %d", theme);
+		unsigned int theme_value = theme_tuple->value->int16;
+		if (theme != theme_value) {
+			theme = theme_value;
+			persist_write_int(PS_THEME, theme);
+			set_theme();
+			if (DEBUG)
+				APP_LOG(APP_LOG_LEVEL_DEBUG, "Theme: %d", theme);
+		}
 	} // theme_tuple
+	
+	if (font_style_tuple) {
+		unsigned int font_style_value = font_style_tuple->value->int16;
+		if (font_style != font_style_value) {
+			font_style = font_style_value;
+			persist_write_int(PS_FONT_STYLE, font_style);
+			update_screen_fonts();
+			if (DEBUG)
+				APP_LOG(APP_LOG_LEVEL_DEBUG, "Font style: %d", font_style);
+		}
+	} // font_style_tuple
 }
 
 void in_dropped_handler(AppMessageResult reason, void *context) {
@@ -575,6 +660,7 @@ void load_persistent_data() {
 	timezone_offset = persist_exists(PS_TIMEZONE_KEY) ? persist_read_int(PS_TIMEZONE_KEY) : 0;
 	theme = persist_exists(PS_THEME) ? persist_read_int(PS_THEME) : 0;
 	otp_default = persist_exists(PS_DEFAULT_KEY) ? persist_read_int(PS_DEFAULT_KEY) : 0;
+	font_style = persist_exists(PS_FONT_STYLE) ? persist_read_int(PS_FONT_STYLE) : 0;
 	
 	if (persist_exists(PS_SECRET)) {
 		for(int i = 0; i < MAX_OTP; i++) {
@@ -588,18 +674,13 @@ void load_persistent_data() {
 			else
 				break;
 		}
-	}
+	} else
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "NO CODES ON WATCH!");
 	
 	if (otp_default >= watch_otp_count)
 		otp_default = 0;
 	
 	otp_selected = otp_default;
-}
-
-void save_persistent_data() {
-	persist_write_int(PS_TIMEZONE_KEY, timezone_offset);
-	persist_write_int(PS_THEME, theme);
-	persist_write_int(PS_DEFAULT_KEY, otp_default);
 }
 
 static void window_load(Window *window) {
@@ -611,29 +692,29 @@ static void window_load(Window *window) {
 	countdown_layer = text_layer_create(GRect(0, bounds.size.h-10, 0, 10));
 	layer_add_child(window_layer, text_layer_get_layer(countdown_layer));
 	
-	text_label_rect = GRect(0, 30, bounds.size.w, 125);
+	text_label_rect = GRect(0, 30, bounds.size.w, 40);
 	GRect text_label_start_rect  = text_label_rect;
 	text_label_start_rect.origin.x = 144;
 	text_label_layer = text_layer_create(text_label_start_rect);
 	text_layer_set_background_color(text_label_layer, GColorClear);
 	text_layer_set_text_alignment(text_label_layer, GTextAlignmentLeft);
-	text_layer_set_font(text_label_layer, font_ORBITRON_28);
+	text_layer_set_overflow_mode(text_label_layer, GTextOverflowModeWordWrap);
 	text_layer_set_text(text_label_layer, label_text);
 	layer_add_child(window_layer, text_layer_get_layer(text_label_layer));
 	
-	text_pin_rect = GRect(0, 60, bounds.size.w, 125);
+	text_pin_rect = GRect(0, 60, bounds.size.w, 40);
 	GRect text_pin_start_rect = text_pin_rect;
 	text_pin_start_rect.origin.x = 144;
 	text_pin_layer = text_layer_create(text_pin_start_rect);
 	text_layer_set_background_color(text_pin_layer, GColorClear);
 	text_layer_set_text_alignment(text_pin_layer, GTextAlignmentCenter);
-	text_layer_set_font(text_pin_layer, font_BITWISE_32);
 	text_layer_set_text(text_pin_layer, pin_text);
 	layer_add_child(window_layer, text_layer_get_layer(text_pin_layer));
 	
 	tick_timer_service_subscribe(SECOND_UNIT, &handle_second_tick);
 	
 	set_theme();
+	set_fonts();
 	
 	refresh_screen_data();
 }
@@ -647,9 +728,6 @@ void window_unload(Window *window) {
 
 void handle_init(void) {
 	load_persistent_data();
-	
-	font_ORBITRON_28 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORBITRON_28));
-	font_BITWISE_32 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BITWISE_32));
 	
 	main_window = window_create();
 	window_set_window_handlers(main_window, (WindowHandlers) {
@@ -676,16 +754,17 @@ void handle_init(void) {
 	app_message_register_outbox_sent(out_sent_handler);
 	app_message_register_outbox_failed(out_failed_handler);
 	
-	const uint32_t inbound_size = 128;
-	const uint32_t outbound_size = 128;
+	const uint32_t inbound_size = 256;
+	const uint32_t outbound_size = 256;
 	app_message_open(inbound_size, outbound_size);
 }
 
 void handle_deinit(void) {
-	save_persistent_data();
 	animation_unschedule_all();
-	fonts_unload_custom_font(font_ORBITRON_28);
-	fonts_unload_custom_font(font_BITWISE_32);
+	if (font_label.isCustom)
+		fonts_unload_custom_font(font_label.font);
+	if (font_pin.isCustom)
+		fonts_unload_custom_font(font_pin.font);
 	window_destroy(details_window);
 	window_destroy(select_window);
 	window_destroy(main_window);

@@ -1,8 +1,9 @@
 {
-    "versionLabel": "1.1.1",
+    "versionLabel": "1.2",
     "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
     "appKeys": {
         "transmit_key": 2,
+        "font_style": 7,
         "key_count": 0,
         "show_message": 4,
         "request_key": 1,
@@ -11,7 +12,7 @@
         "timezone": 3
     },
     "longName": "PebbleAuth",
-    "versionCode": 3,
+    "versionCode": 4,
     "capabilities": [
         "configurable"
     ],
@@ -22,6 +23,28 @@
     },
     "resources": {
         "media": [
+            {
+                "characterRegex": "[0-9]",
+                "type": "font",
+                "name": "FONT_BD_CARTOON_28",
+                "file": "fonts/BD_Cartoon_Shout.ttf"
+            },
+            {
+                "type": "font",
+                "name": "FONT_BD_CARTOON_20",
+                "file": "fonts/BD_Cartoon_Shout.ttf"
+            },
+            {
+                "characterRegex": "[0-9]",
+                "type": "font",
+                "name": "FONT_DIGITAL_38",
+                "file": "fonts/ANDROID_24.ttf"
+            },
+            {
+                "type": "font",
+                "name": "FONT_DIGITAL_28",
+                "file": "fonts/ANDROID_24.ttf"
+            },
             {
                 "menuIcon": true,
                 "type": "png",
@@ -49,7 +72,6 @@
                 "file": "fonts/ORBITRON_28.ttf"
             },
             {
-                "characterRegex": "[0-9A-Z?]",
                 "type": "font",
                 "name": "FONT_BITWISE_32",
                 "file": "fonts/BITWISE_32.ttf"

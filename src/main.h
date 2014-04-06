@@ -15,14 +15,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _HMAC_H_
-#define _HMAC_H_
+#ifndef _MAIN_H_
+#define _MAIN_H_
 
-#include <stdint.h>
+typedef struct {
+	GFont font;
+	bool isCustom;
+} AppFont;
 
-void hmac_sha1(const uint8_t *key, int keyLength,
-               const uint8_t *data, int dataLength,
-               uint8_t *result, int resultLength)
- __attribute__((visibility("hidden")));
 
-#endif /* _HMAC_H_ */
+// define stubs
+void window_config_provider(Window *window);
+void request_key(int code_id);
+void set_fonts();
+
+#endif /* _MAIN_H_ */
