@@ -8,7 +8,7 @@ var font_style = 0;
 var timezoneOffset = 0;
 var message_send_retries = 0;
 var message_send_max_retries = 5;
-var app_version = 4;
+var app_version = 5;
 var debug = false;
 
 function loadLocalVariables() {

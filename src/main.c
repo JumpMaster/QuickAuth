@@ -1,5 +1,5 @@
 //
-// Copyright 2014.
+// Copyright 2014
 // PebbleAuth for the Pebble Smartwatch
 // Author: Kevin Cooper
 // https://github.com/JumpMaster/PebbleAuth
@@ -49,8 +49,9 @@ static AppFont font_label;
 static GFont font_UNISPACE_20;
 
 bool perform_full_refresh = true;	// Start refreshing at launch
-bool finish_refresh = true;			// The text boxes are places offscreen to just whiz them back on
 bool fonts_changed;
+bool loading_complete = false;
+bool animation_running = false;
 
 unsigned int details_selected_key = 0;
 unsigned int js_message_retry_count = 0;
@@ -93,13 +94,17 @@ enum {
 	JS_FONT_STYLE
 };
 
-void refresh_screen_data() {
+void refresh_screen_data(bool flyUp) {
 	perform_full_refresh = true;
+	
+	if (loading_complete) {
+		start_refreshing(flyUp);
+	}
 }
 
 void update_screen_fonts() {
 	fonts_changed = true;
-	refresh_screen_data();
+	refresh_screen_data(false);
 }
 
 void expand_key(char *inputString, bool new_code) {
@@ -140,7 +145,7 @@ void expand_key(char *inputString, bool new_code) {
 				if (otp_selected != i)
 					otp_selected = i;
 				
-				refresh_screen_data();
+				refresh_screen_data(false);
 			}
 		}
 	}
@@ -157,7 +162,7 @@ void expand_key(char *inputString, bool new_code) {
 		}
 		watch_otp_count++;
 		otp_selected = watch_otp_count-1;
-		refresh_screen_data();
+		refresh_screen_data(false);
 	}
 	
 	if (phone_otp_count > 0 && phone_otp_count < requesting_code) {
@@ -172,24 +177,86 @@ void on_animation_stopped(Animation *anim, bool finished, void *context) {
 	property_animation_destroy((PropertyAnimation*) anim);
 }
 
-void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *finish, int duration, int delay) {
+void on_animation_stopped_finish(Animation *anim, bool finished, void *context) {
+	//Free the memory used by the Animation
+	property_animation_destroy((PropertyAnimation*) anim);
+	
+	finish_refreshing();
+}
+
+void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *finish, int duration, bool finish_after_animation) {
 	//Declare animation
 	PropertyAnimation *anim = property_animation_create_layer_frame(layer, start, finish);
 	
 	//Set characteristics
 	animation_set_duration((Animation*) anim, duration);
-	animation_set_delay((Animation*) anim, delay);
 	animation_set_curve((Animation*) anim, curve);
 	
-	//Set stopped handler to free memory
-	AnimationHandlers handlers = {
-		//The reference to the stopped handler is the only one in the array
-		.stopped = (AnimationStoppedHandler) on_animation_stopped
-	};
-	animation_set_handlers((Animation*) anim, handlers, NULL);
+	if (finish_after_animation) {
+		//Set stopped handler to free memory
+		AnimationHandlers handlers = {
+			.stopped = (AnimationStoppedHandler) on_animation_stopped_finish
+		};
+		animation_set_handlers((Animation*) anim, handlers, NULL);
+	} else {
+		AnimationHandlers handlers = {
+			.stopped = (AnimationStoppedHandler) on_animation_stopped
+		};
+		animation_set_handlers((Animation*) anim, handlers, NULL);
+	}
 	
 	//Start animation!
 	animation_schedule((Animation*) anim);
+}
+
+void start_refreshing(bool flyUp) {
+	if (perform_full_refresh)
+	{
+		GRect finish = text_label_rect;
+		if (flyUp)
+			finish.origin.y = -80;
+		else
+			finish.origin.y = 154;
+		animate_layer(text_layer_get_layer(text_label_layer), AnimationCurveEaseIn, &text_label_rect, &finish, 300, false);
+	}
+	
+	GRect finish = text_pin_rect;
+	if (flyUp)
+		finish.origin.y = -50;
+	else
+		finish.origin.y = 184;
+	animate_layer(text_layer_get_layer(text_pin_layer), AnimationCurveEaseIn, &text_pin_rect, &finish, 300, true);;
+}
+
+void finish_refreshing() {
+	if (perform_full_refresh)
+	{
+		if (watch_otp_count)
+			strcpy(label_text, otp_labels[otp_selected]);
+		else
+			strcpy(label_text, "NO");
+		
+		if (fonts_changed) {
+			set_fonts();
+			fonts_changed = false;
+		}
+		
+		GRect start = text_label_rect;
+		start.origin.x = 144;
+		animate_layer(text_layer_get_layer(text_label_layer), AnimationCurveEaseOut, &start, &text_label_rect, 300, false);
+		perform_full_refresh = false;
+	}
+	
+	if (watch_otp_count)
+		strcpy(pin_text, generateCode(otp_keys[otp_selected], timezone_offset));
+	else
+		strcpy(pin_text, "SECRETS");
+	
+	otp_updated_at_tick = otp_update_tick;
+	
+	GRect start = text_pin_rect;
+	start.origin.x = 144;
+	animate_layer(text_layer_get_layer(text_pin_layer), AnimationCurveEaseOut, &start, &text_pin_rect, 300, false);
 }
 
 static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
@@ -199,67 +266,25 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 	if (seconds % 30 == 0)
 		otp_update_tick++;
 			
-	if (!finish_refresh && 
-		(perform_full_refresh || seconds == 29 || seconds == 59 || otp_updated_at_tick != otp_update_tick))
-	{
-		if (perform_full_refresh)
-		{
-			GRect finish = text_label_rect;
-			finish.origin.y = 154;
-			animate_layer(text_layer_get_layer(text_label_layer), AnimationCurveEaseIn, &text_label_rect, &finish, 300, 0);
-		}
-		
-		GRect finish = text_pin_rect;
-		finish.origin.y = 184;
-		animate_layer(text_layer_get_layer(text_pin_layer), AnimationCurveEaseIn, &text_pin_rect, &finish, 300, 0);
-		finish_refresh = true;
-	}
-	else if (finish_refresh)
-	{
-		if (perform_full_refresh)
-		{
-			if (watch_otp_count)
-				strcpy(label_text, otp_labels[otp_selected]);
-			else
-				strcpy(label_text, "NO");
-			
-			if (fonts_changed) {
-				set_fonts();
-				fonts_changed = false;
-			}
-			
-			GRect start = text_label_rect;
-			start.origin.x = 144;
-			animate_layer(text_layer_get_layer(text_label_layer), AnimationCurveEaseOut, &start, &text_label_rect, 300, 0);
-			perform_full_refresh = false;
-		}
-
-		if (watch_otp_count)
-			strcpy(pin_text, generateCode(otp_keys[otp_selected], timezone_offset));
-		else
-			strcpy(pin_text, "SECRETS");
-		
-		otp_updated_at_tick = otp_update_tick;
-		finish_refresh = false;
-		
-		GRect start = text_pin_rect;
-		start.origin.x = 144;
-		animate_layer(text_layer_get_layer(text_pin_layer), AnimationCurveEaseOut, &start, &text_pin_rect, 300, 0);
-	}
+	if	(otp_updated_at_tick != otp_update_tick)
+		start_refreshing(false);
 	
+	//
+	// update countdown layer
+	//
 	Layer *window_layer = window_get_root_layer(main_window);
 	GRect bounds = layer_get_bounds(window_layer);
 	
 	GRect start = layer_get_frame(text_layer_get_layer(countdown_layer));
 	GRect finish = (GRect(0, bounds.size.h-10, bounds.size.w, 10));
-	float boxsize = (30-(seconds%30))/((double)30);
+	float boxpercent = (30-(seconds%30))/((double)30);
 	
-	finish.size.w = finish.size.w * boxsize;
+	finish.size.w = finish.size.w * boxpercent;
 	
 	if (seconds % 30 == 0)
-		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, 0);
+		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, false);
 	else
-		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, 900, 0);
+		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, 900, false);
 }
 
 void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -269,7 +294,7 @@ void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
 		else
 			otp_selected--;
 		
-		refresh_screen_data();
+		refresh_screen_data(false);
 	}
 }
 
@@ -280,7 +305,7 @@ void down_single_click_handler(ClickRecognizerRef recognizer, void *context) {
 		else
 			otp_selected++;
 		
-		refresh_screen_data();
+		refresh_screen_data(true);
 	}
 }
 
@@ -312,58 +337,13 @@ void request_key(int code_id) {
 	sendJSMessage(TupletInteger(JS_REQUEST_KEY, code_id));
 }
 
-static void key_menu_select_callback(int index, void *ctx) {
-	details_selected_key = index;	
-	window_stack_push(details_window, true /* Animated */);
-}
-
-static void select_window_load(Window *window) {
-
-	int num_menu_items = 0;
-	
-	for(unsigned int i = 0; i < watch_otp_count; i++) {
-		if (DEBUG) {
-			key_menu_items[num_menu_items++] = (SimpleMenuItem) {
-				.title = otp_labels[i],
-				.callback = key_menu_select_callback,
-				.subtitle = otp_keys[i],
-			};
-		}
-		else {
-			key_menu_items[num_menu_items++] = (SimpleMenuItem) {
-				.title = otp_labels[i],
-				.callback = key_menu_select_callback,
-			};
-		}
-	}
-	
-	// Bind the menu items to the corresponding menu sections
-	key_menu_sections[0] = (SimpleMenuSection){
-		.num_items = num_menu_items,
-		.items = key_menu_items,
-	};
-
-	Layer *select_window_layer = window_get_root_layer(select_window);
-	GRect bounds = layer_get_frame(select_window_layer);
-	
-	// Initialize the simple menu layer
-	key_menu_layer = simple_menu_layer_create(bounds, select_window, key_menu_sections, 1, NULL);
-	
-	// Add it to the window for display
-	layer_add_child(select_window_layer, simple_menu_layer_get_layer(key_menu_layer));
-}
-
-void select_window_unload(Window *window) {
-	simple_menu_layer_destroy(key_menu_layer);
-}
-
 void details_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context) {
 	otp_default = details_selected_key;
 	persist_write_int(PS_DEFAULT_KEY, otp_default);
 	
 	if (otp_selected != otp_default) {
 		otp_selected = otp_default;
-		refresh_screen_data();
+		refresh_screen_data(false);
 	}
 	
 	window_stack_remove(select_window, false);
@@ -381,7 +361,6 @@ void details_actionbar_config_provider(void *context) {
 	window_single_click_subscribe(BUTTON_ID_UP, (ClickHandler) details_actionbar_up_click_handler);
 	window_single_click_subscribe(BUTTON_ID_DOWN, (ClickHandler) details_actionbar_down_click_handler);
 }
-
 
 static void details_window_load(Window *window) {
 	
@@ -436,11 +415,72 @@ void details_window_unload(Window *window) {
 	text_layer_destroy(details_title_layer);
 	text_layer_destroy(details_key_layer);
 	fonts_unload_custom_font(font_UNISPACE_20);
+	window_destroy(details_window);
+}
+
+static void key_menu_select_callback(int index, void *ctx) {
+	details_selected_key = index;	
+	
+	details_window = window_create();
+	window_set_window_handlers(details_window, (WindowHandlers) {
+		.load = details_window_load,
+		.unload = details_window_unload,
+	});
+	
+	window_stack_push(details_window, true /* Animated */);
+}
+
+static void select_window_load(Window *window) {
+
+	int num_menu_items = 0;
+	
+	for(unsigned int i = 0; i < watch_otp_count; i++) {
+		if (DEBUG) {
+			key_menu_items[num_menu_items++] = (SimpleMenuItem) {
+				.title = otp_labels[i],
+				.callback = key_menu_select_callback,
+				.subtitle = otp_keys[i],
+			};
+		}
+		else {
+			key_menu_items[num_menu_items++] = (SimpleMenuItem) {
+				.title = otp_labels[i],
+				.callback = key_menu_select_callback,
+			};
+		}
+	}
+	
+	// Bind the menu items to the corresponding menu sections
+	key_menu_sections[0] = (SimpleMenuSection){
+		.num_items = num_menu_items,
+		.items = key_menu_items,
+	};
+
+	Layer *select_window_layer = window_get_root_layer(select_window);
+	GRect bounds = layer_get_frame(select_window_layer);
+	
+	// Initialize the simple menu layer
+	key_menu_layer = simple_menu_layer_create(bounds, select_window, key_menu_sections, 1, NULL);
+	
+	// Add it to the window for display
+	layer_add_child(select_window_layer, simple_menu_layer_get_layer(key_menu_layer));
+}
+
+void select_window_unload(Window *window) {
+	simple_menu_layer_destroy(key_menu_layer);
+	window_destroy(select_window);
 }
 
 void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {
-	if (watch_otp_count)
+	if (watch_otp_count) {
+		select_window = window_create();
+		window_set_window_handlers(select_window, (WindowHandlers) {
+			.load = select_window_load,
+			.unload = select_window_unload,
+		});
+		
 		window_stack_push(select_window, true /* Animated */);
+	}
 }
 
 void window_config_provider(Window *window) {
@@ -607,7 +647,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 			
 			if (otp_selected >= key_found) {
 				if (otp_selected == key_found)
-					refresh_screen_data();
+					refresh_screen_data(false);
 				otp_selected--;
 			}
 			
@@ -621,7 +661,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		if (tz_offset != timezone_offset) {
 			timezone_offset = tz_offset;
 			persist_write_int(PS_TIMEZONE_KEY, timezone_offset);
-			refresh_screen_data();
+			refresh_screen_data(false);
 		}
 		if (DEBUG)
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "Timezone Offset: %d", timezone_offset);
@@ -715,8 +755,8 @@ static void window_load(Window *window) {
 	
 	set_theme();
 	set_fonts();
-	
-	refresh_screen_data();
+	loading_complete = true;
+	finish_refreshing();
 }
 
 void window_unload(Window *window) {
@@ -733,18 +773,6 @@ void handle_init(void) {
 	window_set_window_handlers(main_window, (WindowHandlers) {
 		.load = window_load,
 		.unload = window_unload,
-	});
-	
-	select_window = window_create();
-	window_set_window_handlers(select_window, (WindowHandlers) {
-		.load = select_window_load,
-		.unload = select_window_unload,
-	});
-	
-	details_window = window_create();
-	window_set_window_handlers(details_window, (WindowHandlers) {
-		.load = details_window_load,
-		.unload = details_window_unload,
 	});
 	
 	window_stack_push(main_window, true /* Animated */);
@@ -765,8 +793,6 @@ void handle_deinit(void) {
 		fonts_unload_custom_font(font_label.font);
 	if (font_pin.isCustom)
 		fonts_unload_custom_font(font_pin.font);
-	window_destroy(details_window);
-	window_destroy(select_window);
 	window_destroy(main_window);
 }
 
