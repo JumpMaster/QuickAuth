@@ -23,6 +23,7 @@ static TextLayer *text_label_layer;
 
 static GRect text_pin_rect;
 static GRect text_label_rect;
+static GRect display_bounds;
 
 // Selection Window
 Window *select_window;
@@ -51,7 +52,6 @@ static GFont font_UNISPACE_20;
 bool perform_full_refresh = true;	// Start refreshing at launch
 bool fonts_changed;
 bool loading_complete = false;
-bool animation_running = false;
 
 unsigned int details_selected_key = 0;
 unsigned int js_message_retry_count = 0;
@@ -67,6 +67,7 @@ unsigned int otp_default = 0;
 unsigned int otp_update_tick = 0;
 unsigned int otp_updated_at_tick = 0;
 unsigned int requesting_code = 0;
+unsigned int animation_direction = 0;
 
 char otp_labels[MAX_OTP][MAX_LABEL_LENGTH];
 char otp_keys[MAX_OTP][MAX_KEY_LENGTH];
@@ -94,17 +95,24 @@ enum {
 	JS_FONT_STYLE
 };
 
-void refresh_screen_data(bool flyUp) {
+enum { 
+	UP,
+	DOWN,
+	LEFT,
+	RIGHT
+};
+
+void refresh_screen_data(int direction) {
 	perform_full_refresh = true;
-	
+	animation_direction = direction;
 	if (loading_complete) {
-		start_refreshing(flyUp);
+		start_refreshing();
 	}
 }
 
 void update_screen_fonts() {
 	fonts_changed = true;
-	refresh_screen_data(false);
+	refresh_screen_data(DOWN);
 }
 
 void expand_key(char *inputString, bool new_code) {
@@ -145,7 +153,7 @@ void expand_key(char *inputString, bool new_code) {
 				if (otp_selected != i)
 					otp_selected = i;
 				
-				refresh_screen_data(false);
+				refresh_screen_data(DOWN);
 			}
 		}
 	}
@@ -162,7 +170,7 @@ void expand_key(char *inputString, bool new_code) {
 		}
 		watch_otp_count++;
 		otp_selected = watch_otp_count-1;
-		refresh_screen_data(false);
+		refresh_screen_data(DOWN);
 	}
 	
 	if (phone_otp_count > 0 && phone_otp_count < requesting_code) {
@@ -209,22 +217,45 @@ void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *fini
 	animation_schedule((Animation*) anim);
 }
 
-void start_refreshing(bool flyUp) {
+void start_refreshing() {
 	if (perform_full_refresh)
 	{
 		GRect finish = text_label_rect;
-		if (flyUp)
-			finish.origin.y = -80;
-		else
-			finish.origin.y = 154;
+		
+		switch(animation_direction)
+		{
+			case UP :
+				finish.origin.y -= display_bounds.size.h;
+				break;
+			case DOWN :
+				finish.origin.y += display_bounds.size.h;
+				break;
+			case LEFT :
+				finish.origin.x -= display_bounds.size.w;
+				break;
+			case RIGHT :
+				finish.origin.x += display_bounds.size.w;
+				break;
+		}
 		animate_layer(text_layer_get_layer(text_label_layer), AnimationCurveEaseIn, &text_label_rect, &finish, 300, false);
 	}
 	
 	GRect finish = text_pin_rect;
-	if (flyUp)
-		finish.origin.y = -50;
-	else
-		finish.origin.y = 184;
+	switch(animation_direction)
+	{
+		case UP :
+			finish.origin.y -= display_bounds.size.h;
+			break;
+		case DOWN :
+			finish.origin.y += display_bounds.size.h;
+			break;
+		case LEFT :
+			finish.origin.x -= display_bounds.size.w;
+			break;
+		case RIGHT :
+			finish.origin.x += display_bounds.size.w;
+			break;
+	}
 	animate_layer(text_layer_get_layer(text_pin_layer), AnimationCurveEaseIn, &text_pin_rect, &finish, 300, true);;
 }
 
@@ -242,10 +273,26 @@ void finish_refreshing() {
 		}
 		
 		GRect start = text_label_rect;
-		start.origin.x = 144;
+		switch(animation_direction)
+		{
+			case UP :
+				start.origin.y += display_bounds.size.h;
+				break;
+			case DOWN :
+				start.origin.y -= display_bounds.size.h;
+				break;
+			case LEFT :
+				start.origin.x += display_bounds.size.w;
+				break;
+			case RIGHT :
+				start.origin.x -= display_bounds.size.w;
+				break;
+		}
 		animate_layer(text_layer_get_layer(text_label_layer), AnimationCurveEaseOut, &start, &text_label_rect, 300, false);
 		perform_full_refresh = false;
 	}
+	else
+		animation_direction = LEFT;
 	
 	if (watch_otp_count)
 		strcpy(pin_text, generateCode(otp_keys[otp_selected], timezone_offset));
@@ -255,7 +302,21 @@ void finish_refreshing() {
 	otp_updated_at_tick = otp_update_tick;
 	
 	GRect start = text_pin_rect;
-	start.origin.x = 144;
+	switch(animation_direction)
+	{
+		case UP :
+			start.origin.y += display_bounds.size.h;
+			break;
+		case DOWN :
+			start.origin.y -= display_bounds.size.h;
+			break;
+		case LEFT :
+			start.origin.x += display_bounds.size.w;
+			break;
+		case RIGHT :
+			start.origin.x -= display_bounds.size.w;
+			break;
+	}
 	animate_layer(text_layer_get_layer(text_pin_layer), AnimationCurveEaseOut, &start, &text_pin_rect, 300, false);
 }
 
@@ -266,8 +327,10 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 	if (seconds % 30 == 0)
 		otp_update_tick++;
 			
-	if	(otp_updated_at_tick != otp_update_tick)
-		start_refreshing(false);
+	if	(otp_updated_at_tick != otp_update_tick) {
+		animation_direction = DOWN;
+		start_refreshing();
+	}
 	
 	//
 	// update countdown layer
@@ -294,7 +357,7 @@ void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
 		else
 			otp_selected--;
 		
-		refresh_screen_data(false);
+		refresh_screen_data(DOWN);
 	}
 }
 
@@ -305,7 +368,7 @@ void down_single_click_handler(ClickRecognizerRef recognizer, void *context) {
 		else
 			otp_selected++;
 		
-		refresh_screen_data(true);
+		refresh_screen_data(UP);
 	}
 }
 
@@ -343,7 +406,7 @@ void details_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *con
 	
 	if (otp_selected != otp_default) {
 		otp_selected = otp_default;
-		refresh_screen_data(false);
+		refresh_screen_data(DOWN);
 	}
 	
 	window_stack_remove(select_window, false);
@@ -647,7 +710,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 			
 			if (otp_selected >= key_found) {
 				if (otp_selected == key_found)
-					refresh_screen_data(false);
+					refresh_screen_data(DOWN);
 				otp_selected--;
 			}
 			
@@ -661,7 +724,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		if (tz_offset != timezone_offset) {
 			timezone_offset = tz_offset;
 			persist_write_int(PS_TIMEZONE_KEY, timezone_offset);
-			refresh_screen_data(false);
+			refresh_screen_data(DOWN);
 		}
 		if (DEBUG)
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "Timezone Offset: %d", timezone_offset);
@@ -727,12 +790,12 @@ static void window_load(Window *window) {
 	window_set_click_config_provider(main_window, (ClickConfigProvider) window_config_provider);
 	
 	Layer *window_layer = window_get_root_layer(main_window);
-	GRect bounds = layer_get_frame(window_layer);
+	display_bounds = layer_get_frame(window_layer);
 	
-	countdown_layer = text_layer_create(GRect(0, bounds.size.h-10, 0, 10));
+	countdown_layer = text_layer_create(GRect(0, display_bounds.size.h-10, 0, 10));
 	layer_add_child(window_layer, text_layer_get_layer(countdown_layer));
 	
-	text_label_rect = GRect(0, 30, bounds.size.w, 40);
+	text_label_rect = GRect(0, 30, display_bounds.size.w, 40);
 	GRect text_label_start_rect  = text_label_rect;
 	text_label_start_rect.origin.x = 144;
 	text_label_layer = text_layer_create(text_label_start_rect);
@@ -742,7 +805,7 @@ static void window_load(Window *window) {
 	text_layer_set_text(text_label_layer, label_text);
 	layer_add_child(window_layer, text_layer_get_layer(text_label_layer));
 	
-	text_pin_rect = GRect(0, 60, bounds.size.w, 40);
+	text_pin_rect = GRect(0, 60, display_bounds.size.w, 40);
 	GRect text_pin_start_rect = text_pin_rect;
 	text_pin_start_rect.origin.x = 144;
 	text_pin_layer = text_layer_create(text_pin_start_rect);

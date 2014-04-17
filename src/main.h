@@ -29,7 +29,7 @@ void window_config_provider(Window *window);
 void request_key(int code_id);
 void set_fonts();
 static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed);
-void start_refreshing(bool flyUp);
+void start_refreshing();
 void finish_refreshing();
 
 #endif /* _MAIN_H_ */
