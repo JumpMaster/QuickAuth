@@ -13,7 +13,7 @@
 #define MAX_LABEL_LENGTH 21 // 20 + termination
 #define MAX_KEY_LENGTH 65 // 64 + termination
 #define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
-#define DEBUG false
+#define DEBUG true
 
 // Main Window
 Window *main_window;
@@ -67,47 +67,20 @@ unsigned int otp_default = 0;
 unsigned int otp_update_tick = 0;
 unsigned int otp_updated_at_tick = 0;
 unsigned int requesting_code = 0;
-unsigned int animation_direction = 0;
+unsigned int animation_direction = RIGHT;
 
 char otp_labels[MAX_OTP][MAX_LABEL_LENGTH];
 char otp_keys[MAX_OTP][MAX_KEY_LENGTH];
 char label_text[MAX_LABEL_LENGTH];
 char pin_text[MAX_KEY_LENGTH];
 
-// Persistant Storage Keys
-enum {
-	PS_TIMEZONE_KEY,
-	PS_THEME,
-	PS_DEFAULT_KEY,
-	PS_FONT_STYLE,
-	PS_SECRET = 0x40 // Needs 16 spaces, should always be last
-};
-
-// JScript Keys
-enum {
-	JS_KEY_COUNT,
-	JS_REQUEST_KEY,
-	JS_TRANSMIT_KEY,
-	JS_TIMEZONE,
-	JS_DISPLAY_MESSAGE,
-	JS_THEME,
-	JS_DELETE_KEY,
-	JS_FONT_STYLE
-};
-
-enum { 
-	UP,
-	DOWN,
-	LEFT,
-	RIGHT
-};
-
 void refresh_screen_data(int direction) {
+	if (!loading_complete)
+		return;
+	
 	perform_full_refresh = true;
 	animation_direction = direction;
-	if (loading_complete) {
-		start_refreshing();
-	}
+	start_refreshing();
 }
 
 void update_screen_fonts() {
@@ -144,8 +117,8 @@ void expand_key(char *inputString, bool new_code) {
 			if (strcmp(otp_key, otp_keys[i]) == 0) {
 				updating_label = true;
 				if (DEBUG) {
-					APP_LOG(APP_LOG_LEVEL_DEBUG, "Code exists. Relabeling");
-					APP_LOG(APP_LOG_LEVEL_DEBUG, "Saving to location: %d", PS_SECRET+i);
+					APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Code exists. Relabeling");
+					APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Saving to location: %d", PS_SECRET+i);
 				}
 
 				strcpy(otp_labels[i], otp_label);
@@ -160,12 +133,12 @@ void expand_key(char *inputString, bool new_code) {
 	
 	if (!updating_label) {
 		if (DEBUG)
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "Adding Code");
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Adding Code");
 		strcpy(otp_keys[watch_otp_count], otp_key);
 		strcpy(otp_labels[watch_otp_count], otp_label);
 		if (new_code) {
 			if (DEBUG)
-				APP_LOG(APP_LOG_LEVEL_DEBUG, "Saving to location: %d", PS_SECRET+watch_otp_count);
+				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Saving to location: %d", PS_SECRET+watch_otp_count);
 			persist_write_string(PS_SECRET+watch_otp_count, inputString);
 		}
 		watch_otp_count++;
@@ -175,8 +148,10 @@ void expand_key(char *inputString, bool new_code) {
 	
 	if (phone_otp_count > 0 && phone_otp_count < requesting_code) {
 		requesting_code = 0;
+		loading_complete = true;
+		refresh_screen_data(DOWN);
 		if (DEBUG)
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "FINISHED REQUESTING");
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: FINISHED REQUESTING");
 	}
 }
 
@@ -267,10 +242,8 @@ void finish_refreshing() {
 		else
 			strcpy(label_text, "NO");
 		
-		if (fonts_changed) {
+		if (fonts_changed)
 			set_fonts();
-			fonts_changed = false;
-		}
 		
 		GRect start = text_label_rect;
 		switch(animation_direction)
@@ -321,6 +294,9 @@ void finish_refreshing() {
 }
 
 static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
+	
+	if (!loading_complete)
+		return;
 	
 	int seconds = tick_time->tm_sec;
 	
@@ -388,14 +364,14 @@ void sendJSMessage(Tuplet data_tuple) {
 
 void request_delete(char *delete_key) {
 	if (DEBUG)
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Pebble Requesting delete: %s", delete_key);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Pebble Requesting delete: %s", delete_key);
 
 	sendJSMessage(TupletCString(JS_DELETE_KEY, delete_key));
 }
 
 void request_key(int code_id) {
 	if (DEBUG)
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting code: %d", code_id);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Requesting code: %d", code_id);
 
 	sendJSMessage(TupletInteger(JS_REQUEST_KEY, code_id));
 }
@@ -415,7 +391,7 @@ void details_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *con
 
 void details_actionbar_down_click_handler(ClickRecognizerRef recognizer, void *context) {
 	request_delete(otp_keys[details_selected_key]);
-	
+
 	window_stack_remove(select_window, false);
 	window_stack_pop(true);
 }
@@ -557,11 +533,11 @@ void out_sent_handler(DictionaryIterator *sent, void *context) {
 	js_message_retry_count = 0;
 	
 	if (DEBUG)
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Outgoing Message Delivered");
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Outgoing Message Delivered");
 		
 	if (requesting_code > 0) {
 		if (DEBUG)
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "REQUESTING ANOTHER!");
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: REQUESTING ANOTHER!");
 		request_key(requesting_code++);
 	}
 }
@@ -569,13 +545,13 @@ void out_sent_handler(DictionaryIterator *sent, void *context) {
 void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, void *context) {
 	// outgoing message failed
 	if (DEBUG)
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Outgoing Message Failed");
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Outgoing Message Failed");
 	
 	if (requesting_code > 0 && js_message_retry_count < js_message_max_retry_count) {
 		js_message_retry_count++;
 		
 		if (DEBUG)
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "RETRY:%d REQUESTING ANOTHER!", js_message_retry_count);
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: RETRY:%d REQUESTING ANOTHER!", js_message_retry_count);
 		
 		request_key(requesting_code);
 	}
@@ -642,12 +618,13 @@ void set_fonts() {
 
 	text_layer_set_font(text_label_layer, font_label.font);
 	text_layer_set_font(text_pin_layer, font_pin.font);
+	fonts_changed = false;
 }
 
 static void in_received_handler(DictionaryIterator *iter, void *context) {
 	// Check for fields you expect to receive
 	if (DEBUG)
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Message Recieved");
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Message Recieved");
 	
 	Tuple *key_count_tuple = dict_find(iter, JS_KEY_COUNT);
 	Tuple *key_tuple = dict_find(iter, JS_TRANSMIT_KEY);
@@ -655,19 +632,36 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 	Tuple *timezone_tuple = dict_find(iter, JS_TIMEZONE);
 	Tuple *theme_tuple = dict_find(iter, JS_THEME);
 	Tuple *font_style_tuple = dict_find(iter, JS_FONT_STYLE);
+	Tuple *delete_all_tuple = dict_find(iter, JS_DELETE_ALL);
 	
 	// Act on the found fields received
+	if (delete_all_tuple) {
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Delete all requested");
+		
+		for (unsigned int i = 0; i <= MAX_OTP; i++) {
+			if (DEBUG)
+				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Deleting key: %d", i);
+			persist_delete(PS_SECRET+i);
+		}
+		otp_default = 0;
+		watch_otp_count = 0;
+		otp_selected = 0;
+		persist_write_int(PS_DEFAULT_KEY, otp_default);
+		refresh_screen_data(DOWN);
+	} // delete_all_tuple
+	
 	if (key_count_tuple) {
 		if (DEBUG) {
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "Key count from watch: %d", watch_otp_count);
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "Key count from phone: %d", key_count_tuple->value->int16);
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Key count from watch: %d", watch_otp_count);
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Key count from phone: %d", key_count_tuple->value->int16);
 		}
 		phone_otp_count = key_count_tuple->value->int16;
 		
-		//if (watch_otp_count == 0 && phone_otp_count > 0) {
 		if (watch_otp_count < phone_otp_count) {
 			if (DEBUG)
-				APP_LOG(APP_LOG_LEVEL_DEBUG, "REQUESTING CODES!!!");
+				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: REQUESTING CODES");
+			loading_complete = false;
 			requesting_code = 1;
 			request_key(requesting_code++);
 		}
@@ -677,7 +671,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		char key_value[MAX_COMBINED_LENGTH];
 		memcpy(key_value, key_tuple->value->cstring, key_tuple->length);
 		if (DEBUG)
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "Text: %s", key_value);
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Text: %s", key_value);
 		expand_key(key_value, true);
 	} // key_tuple
 	
@@ -685,7 +679,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		char key_value[MAX_COMBINED_LENGTH];
 		memcpy(key_value, key_delete_tuple->value->cstring, key_delete_tuple->length);
 		if (DEBUG)
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "Deleting requested Key: %s", key_value);
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Deleting requested Key: %s", key_value);
 		
 		unsigned int key_found = MAX_OTP;
 		for(unsigned int i = 0; i < watch_otp_count; i++) {
@@ -727,7 +721,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 			refresh_screen_data(DOWN);
 		}
 		if (DEBUG)
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "Timezone Offset: %d", timezone_offset);
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Timezone Offset: %d", timezone_offset);
 	} // timezone_tuple
 	
 	if (theme_tuple) {
@@ -737,7 +731,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 			persist_write_int(PS_THEME, theme);
 			set_theme();
 			if (DEBUG)
-				APP_LOG(APP_LOG_LEVEL_DEBUG, "Theme: %d", theme);
+				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Theme: %d", theme);
 		}
 	} // theme_tuple
 	
@@ -748,7 +742,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 			persist_write_int(PS_FONT_STYLE, font_style);
 			update_screen_fonts();
 			if (DEBUG)
-				APP_LOG(APP_LOG_LEVEL_DEBUG, "Font style: %d", font_style);
+				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Font style: %d", font_style);
 		}
 	} // font_style_tuple
 }
@@ -756,7 +750,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 void in_dropped_handler(AppMessageResult reason, void *context) {
 	// incoming message dropped
 	if (DEBUG)
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "Incoming Message Dropped");
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Incoming Message Dropped");
 }
 
 void load_persistent_data() {	
@@ -769,7 +763,7 @@ void load_persistent_data() {
 		for(int i = 0; i < MAX_OTP; i++) {
 			if (persist_exists(PS_SECRET+i)) {
 				if (DEBUG)
-					APP_LOG(APP_LOG_LEVEL_DEBUG, "LOADING CODE FROM LOCATION %d", PS_SECRET+i);
+					APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: LOADING CODE FROM LOCATION %d", PS_SECRET+i);
 				char keylabelpair[MAX_COMBINED_LENGTH];
 				persist_read_string(PS_SECRET+i, keylabelpair, MAX_COMBINED_LENGTH);
 				expand_key(keylabelpair, false);
@@ -778,7 +772,7 @@ void load_persistent_data() {
 				break;
 		}
 	} else
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "NO CODES ON WATCH!");
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: NO CODES ON WATCH!");
 	
 	if (otp_default >= watch_otp_count)
 		otp_default = 0;
@@ -797,7 +791,6 @@ static void window_load(Window *window) {
 	
 	text_label_rect = GRect(0, 30, display_bounds.size.w, 40);
 	GRect text_label_start_rect  = text_label_rect;
-	text_label_start_rect.origin.x = 144;
 	text_label_layer = text_layer_create(text_label_start_rect);
 	text_layer_set_background_color(text_label_layer, GColorClear);
 	text_layer_set_text_alignment(text_label_layer, GTextAlignmentLeft);
@@ -807,7 +800,6 @@ static void window_load(Window *window) {
 	
 	text_pin_rect = GRect(0, 60, display_bounds.size.w, 40);
 	GRect text_pin_start_rect = text_pin_rect;
-	text_pin_start_rect.origin.x = 144;
 	text_pin_layer = text_layer_create(text_pin_start_rect);
 	text_layer_set_background_color(text_pin_layer, GColorClear);
 	text_layer_set_text_alignment(text_pin_layer, GTextAlignmentCenter);

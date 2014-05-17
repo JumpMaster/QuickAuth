@@ -1,81 +1,82 @@
 {
-    "versionLabel": "1.3",
-    "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
-    "appKeys": {
-        "transmit_key": 2,
-        "font_style": 7,
-        "key_count": 0,
-        "show_message": 4,
-        "request_key": 1,
-        "theme": 5,
-        "delete_key": 6,
-        "timezone": 3
-    },
-    "longName": "PebbleAuth",
-    "versionCode": 5,
     "capabilities": [
         "configurable"
     ],
-    "shortName": "PebbleAuth",
-    "companyName": "JumpMaster",
-    "watchapp": {
-        "watchface": false
+    "appKeys": {
+        "delete_key": 6,
+        "request_key": 1,
+        "timezone": 3,
+        "show_message": 4,
+        "theme": 5,
+        "font_style": 7,
+        "transmit_key": 2,
+        "delete_all": 8,
+        "key_count": 0
     },
     "resources": {
         "media": [
             {
-                "characterRegex": "[0-9]",
-                "type": "font",
-                "name": "FONT_BD_CARTOON_28",
-                "file": "fonts/BD_Cartoon_Shout.ttf"
-            },
-            {
-                "type": "font",
-                "name": "FONT_BD_CARTOON_20",
-                "file": "fonts/BD_Cartoon_Shout.ttf"
-            },
-            {
-                "characterRegex": "[0-9]",
-                "type": "font",
-                "name": "FONT_DIGITAL_38",
-                "file": "fonts/ANDROID_24.ttf"
-            },
-            {
-                "type": "font",
-                "name": "FONT_DIGITAL_28",
-                "file": "fonts/ANDROID_24.ttf"
-            },
-            {
-                "menuIcon": true,
-                "type": "png",
                 "name": "IMAGE_ICON",
-                "file": "images/auth_icon.png"
+                "file": "images/auth_icon.png",
+                "menuIcon": true,
+                "type": "png"
             },
             {
-                "type": "font",
-                "name": "FONT_UNISPACE_20",
-                "file": "fonts/UNISPACE_20.ttf"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_ICON_YES",
-                "file": "images/Yes.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_ICON_NO",
-                "file": "images/No.png"
-            },
-            {
-                "type": "font",
-                "name": "FONT_ORBITRON_28",
-                "file": "fonts/ORBITRON_28.ttf"
-            },
-            {
-                "type": "font",
                 "name": "FONT_BITWISE_32",
-                "file": "fonts/BITWISE_32.ttf"
+                "file": "fonts/BITWISE_32.ttf",
+                "type": "font"
+            },
+            {
+                "name": "FONT_ORBITRON_28",
+                "file": "fonts/ORBITRON_28.ttf",
+                "type": "font"
+            },
+            {
+                "name": "IMAGE_ICON_NO",
+                "file": "images/No.png",
+                "type": "png"
+            },
+            {
+                "name": "IMAGE_ICON_YES",
+                "file": "images/Yes.png",
+                "type": "png"
+            },
+            {
+                "name": "FONT_UNISPACE_20",
+                "file": "fonts/UNISPACE_20.ttf",
+                "type": "font"
+            },
+            {
+                "name": "FONT_DIGITAL_28",
+                "file": "fonts/ANDROID_24.ttf",
+                "type": "font"
+            },
+            {
+                "name": "FONT_DIGITAL_38",
+                "file": "fonts/ANDROID_24.ttf",
+                "type": "font",
+                "characterRegex": "[0-9]"
+            },
+            {
+                "name": "FONT_BD_CARTOON_20",
+                "file": "fonts/BD_Cartoon_Shout.ttf",
+                "type": "font"
+            },
+            {
+                "name": "FONT_BD_CARTOON_28",
+                "file": "fonts/BD_Cartoon_Shout.ttf",
+                "type": "font",
+                "characterRegex": "[0-9]"
             }
         ]
+    },
+    "shortName": "PebbleAuth",
+    "longName": "PebbleAuth",
+    "versionCode": 5,
+    "companyName": "JumpMaster",
+    "versionLabel": "1.4",
+    "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
+    "watchapp": {
+        "watchface": false
     }
 }

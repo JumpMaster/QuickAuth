@@ -8,8 +8,8 @@ var font_style = 0;
 var timezoneOffset = 0;
 var message_send_retries = 0;
 var message_send_max_retries = 5;
-var app_version = 5;
-var debug = false;
+var app_version = 6;
+var debug = true;
 
 function loadLocalVariables() {
 	otp_count = parseInt(localStorage.getItem("otp_count"));
@@ -19,6 +19,7 @@ function loadLocalVariables() {
 	timezoneOffset = new Date().getTimezoneOffset();
 	
 	otp_count = !otp_count ? 0 : otp_count;
+	otp_count = otp_count < 0 ? 0 : otp_count;
 	theme = !theme ? 0 : theme;
 	font_style = !font_style ? 0 : font_style;
 }
@@ -27,19 +28,19 @@ function sendAppMessage(data) {
 	Pebble.sendAppMessage(data,
 						function(e) { // SUCCESS
 							if (debug)
-								console.log("Successfully delivered message with transactionId=" + e.data.transactionId);
+								console.log("INFO: Successfully delivered message with transactionId=" + e.data.transactionId);
 							message_send_retries = 0;
 						}, function(e) { // FAILURE
 							if (debug)
-								console.log("Unable to deliver message with transactionId=" + e.data.transactionId + " Error is: " + e.error.message);
+								console.log("ERROR: Unable to deliver message with transactionId=" + e.data.transactionId + " Error is: " + e.error.message);
 							if (message_send_retries <= message_send_max_retries) {
 								message_send_retries++;
 								if (debug)
-									console.log("Retry: " + message_send_retries);
+									console.log("INFO: Retry: " + message_send_retries);
 								sendAppMessage(data);
 							} else {
 								if (debug)
-									console.log("All retries failed");
+									console.log("ERROR: All retries failed");
 								message_send_retries = 0;
 							}
 						});
@@ -48,7 +49,7 @@ function sendAppMessage(data) {
 Pebble.addEventListener("ready",
 							function(e) {
 								if (debug)
-									console.log("JavaScript app ready and running!");
+									console.log("INFO: JavaScript app ready and running!");
 
 								// localStorage should only be accessed are the "ready" event is fired
 								loadLocalVariables();
@@ -62,10 +63,10 @@ Pebble.addEventListener("ready",
 									});
 
 								if (debug) {
-									console.log("otp_count="+otp_count);
-									console.log("theme="+theme);
-									console.log("timezoneOffset="+timezoneOffset);
-									console.log("font_style="+font_style);
+									console.log("INFO: otp_count="+otp_count);
+									console.log("INFO: theme="+theme);
+									console.log("INFO: timezoneOffset="+timezoneOffset);
+									console.log("INFO: font_style="+font_style);
 								}
 							}
 						);
@@ -99,15 +100,15 @@ function confirmDelete(secret) {
 Pebble.addEventListener("appmessage",
 							function(e) {
 								if (debug)
-									console.log("Message Recieved");
+									console.log("INFO: Message Recieved");
 								if (e.payload.request_key) {
 									if (debug)
-										console.log("Requested key: "+e.payload.request_key);
+										console.log("INFO: Requested key: "+e.payload.request_key);
 									sendKeyToWatch(localStorage.getItem("secret_pair"+(e.payload.request_key-1)));
 								}
 								else if (e.payload.delete_key) {
 									if (debug)
-										console.log("Deleting key: "+e.payload.delete_key);
+										console.log("INFO: Deleting key: "+e.payload.delete_key);
 									confirmDelete(e.payload.delete_key);
 								}
 								else {
@@ -124,7 +125,7 @@ Pebble.addEventListener('showConfiguration', function(e) {
 		'&font_style='+font_style;
 	
 	if (debug)
-		console.log(url);
+		console.log("INFO: "+url);
 	Pebble.openURL(url);
 });
 
@@ -132,10 +133,25 @@ Pebble.addEventListener("webviewclosed",
 							function(e) {
 								var configuration = JSON.parse(e.response);
 								var config ={};
+								var i = 0;
+								
+								if(!isNaN(configuration.delete_all)) {
+									if (debug)
+										console.log("INFO: Delete all requested");
+									for (i = 0; i <= MAX_OTP;i++) {
+										if (debug)
+											console.log("INFO: Deleting key "+i);
+										localStorage.removeItem('secret_pair'+i);
+									}
+									localStorage.setItem("otp_count",0);
+									
+									sendAppMessage(configuration);
+									return;
+								}
 								
 								if(!isNaN(configuration.theme) && configuration.theme != theme) {
 									if (debug)
-										console.log("Theme changed");
+										console.log("INFO: Theme changed");
 									
 									theme = configuration.theme;
 									localStorage.setItem("theme",theme);
@@ -144,7 +160,7 @@ Pebble.addEventListener("webviewclosed",
 								
 								if(!isNaN(configuration.font_style) && configuration.font_style != font_style) {
 									if (debug)
-										console.log("Font style changed:"+configuration.font_style);
+										console.log("INFO: Font style changed:"+configuration.font_style);
 
 									font_style = configuration.font_style;
 									localStorage.setItem("font_style",font_style);
@@ -165,11 +181,11 @@ Pebble.addEventListener("webviewclosed",
 									var secretPair = label + ":" + secret;
 									
 									var blnKeyExists = false;
-									for (var i=0;i<otp_count;i++) {
+									for (i=0;i<otp_count;i++) {
 										var savedSecret = localStorage.getItem('secret_pair'+i);
 										if (savedSecret !== null && savedSecret.indexOf(secret) != -1) {
 											if (debug)
-												console.log("Relabled code");
+												console.log("INFO: Relabled code");
 											
 											blnKeyExists = true;
 											localStorage.setItem('secret_pair'+i,secretPair);
@@ -178,7 +194,7 @@ Pebble.addEventListener("webviewclosed",
 									}
 									if(!blnKeyExists && otp_count < MAX_OTP) {
 										if (debug)
-											console.log("Uploading new key:"+secretPair);
+											console.log("INFO: Uploading new key:"+secretPair);
 										
 										localStorage.setItem('secret_pair'+otp_count,secretPair);
 										otp_count++;
@@ -187,15 +203,15 @@ Pebble.addEventListener("webviewclosed",
 									}
 									else if (blnKeyExists) {
 										if (debug)
-											console.log("Code exists, updating label");
+											console.log("INFO: Code exists, updating label");
 									}
 									else if (otp_count >= MAX_OTP) {
 										if (debug)
-											console.log("Too many codes..."+otp_count);
+											console.log("WARN: Too many codes..."+otp_count);
 									}
 								}
 								if (debug)
-									console.log("Uploading config");
+									console.log("INFO: Uploading config");
 								sendAppMessage(config);
 							}
 						);

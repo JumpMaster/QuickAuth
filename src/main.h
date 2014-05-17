@@ -24,6 +24,35 @@ typedef struct {
 } AppFont;
 
 
+// Persistant Storage Keys
+enum {
+	PS_TIMEZONE_KEY,
+	PS_THEME,
+	PS_DEFAULT_KEY,
+	PS_FONT_STYLE,
+	PS_SECRET = 0x40 // Needs 16 spaces, should always be last
+};
+
+// JScript Keys
+enum {
+	JS_KEY_COUNT,
+	JS_REQUEST_KEY,
+	JS_TRANSMIT_KEY,
+	JS_TIMEZONE,
+	JS_DISPLAY_MESSAGE,
+	JS_THEME,
+	JS_DELETE_KEY,
+	JS_FONT_STYLE,
+	JS_DELETE_ALL
+};
+
+enum { 
+	UP,
+	DOWN,
+	LEFT,
+	RIGHT
+};
+
 // define stubs
 void window_config_provider(Window *window);
 void request_key(int code_id);
