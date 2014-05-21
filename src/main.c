@@ -174,7 +174,7 @@ void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *fini
 	//Set characteristics
 	animation_set_duration((Animation*) anim, duration);
 	animation_set_curve((Animation*) anim, curve);
-	
+
 	if (finish_after_animation) {
 		//Set stopped handler to free memory
 		AnimationHandlers handlers = {
@@ -234,7 +234,7 @@ void start_refreshing() {
 	animate_layer(text_layer_get_layer(text_pin_layer), AnimationCurveEaseIn, &text_pin_rect, &finish, 300, true);;
 }
 
-void finish_refreshing() {
+void finish_refreshing() {	
 	if (perform_full_refresh)
 	{
 		if (watch_otp_count)
@@ -320,10 +320,10 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 	
 	finish.size.w = finish.size.w * boxpercent;
 	
-	if (seconds % 30 == 0)
-		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, false);
-	else
-		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, 900, false);
+//	if (seconds % 30 == 0)
+//		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, false);
+//	else
+//		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, 900, false);
 }
 
 void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -615,7 +615,6 @@ void set_fonts() {
 			font_pin.isCustom = true;
 			break;
 	}
-
 	text_layer_set_font(text_label_layer, font_label.font);
 	text_layer_set_font(text_pin_layer, font_pin.font);
 	fonts_changed = false;

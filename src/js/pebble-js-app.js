@@ -12,14 +12,21 @@ var app_version = 6;
 var debug = true;
 
 function loadLocalVariables() {
-	otp_count = parseInt(localStorage.getItem("otp_count"));
+
+	for (var i=0; i<MAX_OTP; i++)
+	{
+		var tempKey = localStorage.getItem("secret_pair"+i);
+		if (tempKey)
+			otp_count++;
+		else
+			break;
+	}
+	
 	theme = parseInt(localStorage.getItem("theme"));
 	font_style = parseInt(localStorage.getItem("font_style"));
 	
 	timezoneOffset = new Date().getTimezoneOffset();
 	
-	otp_count = !otp_count ? 0 : otp_count;
-	otp_count = otp_count < 0 ? 0 : otp_count;
 	theme = !theme ? 0 : theme;
 	font_style = !font_style ? 0 : font_style;
 }
@@ -68,6 +75,15 @@ Pebble.addEventListener("ready",
 									console.log("INFO: timezoneOffset="+timezoneOffset);
 									console.log("INFO: font_style="+font_style);
 								}
+								
+								// ####### CLEAN APP ##############
+//								for (var i=0; i<MAX_OTP; i++)
+//								{
+//									localStorage.removeItem('secret_pair'+i);
+//								}
+//								localStorage.removeItem("theme");
+//								localStorage.removeItem("font_style");
+								// ####### /CLEAN APP ##############
 							}
 						);
 
@@ -91,8 +107,6 @@ function confirmDelete(secret) {
 				localStorage.removeItem('secret_pair'+i);
 		}
 	}
-	otp_count--;
-	localStorage.setItem("otp_count",otp_count);
 	sendAppMessage({"delete_key":secret});
 }
 
@@ -143,7 +157,6 @@ Pebble.addEventListener("webviewclosed",
 											console.log("INFO: Deleting key "+i);
 										localStorage.removeItem('secret_pair'+i);
 									}
-									localStorage.setItem("otp_count",0);
 									
 									sendAppMessage(configuration);
 									return;
@@ -198,7 +211,6 @@ Pebble.addEventListener("webviewclosed",
 										
 										localStorage.setItem('secret_pair'+otp_count,secretPair);
 										otp_count++;
-										localStorage.setItem("otp_count",otp_count);
 										config.transmit_key = secretPair;
 									}
 									else if (blnKeyExists) {
