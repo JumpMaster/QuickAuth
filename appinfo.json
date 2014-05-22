@@ -1,82 +1,82 @@
 {
-    "versionLabel": "1.4",
-    "capabilities": [
-        "configurable"
-    ],
-    "shortName": "PebbleAuth",
-    "longName": "PebbleAuth",
-    "versionCode": 5,
-    "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
     "resources": {
         "media": [
             {
-                "type": "png",
-                "file": "images/auth_icon.png",
+                "name": "IMAGE_ICON",
                 "menuIcon": true,
-                "name": "IMAGE_ICON"
-            },
-            {
-                "type": "font",
-                "file": "fonts/BITWISE_32.ttf",
-                "name": "FONT_BITWISE_32"
-            },
-            {
-                "type": "font",
-                "file": "fonts/ORBITRON_28.ttf",
-                "name": "FONT_ORBITRON_28"
-            },
-            {
                 "type": "png",
-                "file": "images/No.png",
-                "name": "IMAGE_ICON_NO"
+                "file": "images/auth_icon.png"
             },
             {
+                "name": "FONT_BITWISE_32",
+                "type": "font",
+                "file": "fonts/BITWISE_32.ttf"
+            },
+            {
+                "name": "FONT_ORBITRON_28",
+                "type": "font",
+                "file": "fonts/ORBITRON_28.ttf"
+            },
+            {
+                "name": "IMAGE_ICON_NO",
                 "type": "png",
-                "file": "images/Yes.png",
-                "name": "IMAGE_ICON_YES"
+                "file": "images/No.png"
             },
             {
-                "type": "font",
-                "file": "fonts/UNISPACE_20.ttf",
-                "name": "FONT_UNISPACE_20"
+                "name": "IMAGE_ICON_YES",
+                "type": "png",
+                "file": "images/Yes.png"
             },
             {
+                "name": "FONT_UNISPACE_20",
                 "type": "font",
-                "file": "fonts/ANDROID_24.ttf",
-                "name": "FONT_DIGITAL_28"
+                "file": "fonts/UNISPACE_20.ttf"
             },
             {
+                "name": "FONT_DIGITAL_28",
                 "type": "font",
-                "file": "fonts/ANDROID_24.ttf",
+                "file": "fonts/ANDROID_24.ttf"
+            },
+            {
+                "name": "FONT_DIGITAL_38",
                 "characterRegex": "[0-9]",
-                "name": "FONT_DIGITAL_38"
+                "type": "font",
+                "file": "fonts/ANDROID_24.ttf"
             },
             {
+                "name": "FONT_BD_CARTOON_20",
                 "type": "font",
-                "file": "fonts/BD_Cartoon_Shout.ttf",
-                "name": "FONT_BD_CARTOON_20"
+                "file": "fonts/BD_Cartoon_Shout.ttf"
             },
             {
-                "type": "font",
-                "file": "fonts/BD_Cartoon_Shout.ttf",
+                "name": "FONT_BD_CARTOON_28",
                 "characterRegex": "[0-9]",
-                "name": "FONT_BD_CARTOON_28"
+                "type": "font",
+                "file": "fonts/BD_Cartoon_Shout.ttf"
             }
         ]
     },
+    "companyName": "JumpMaster",
+    "shortName": "PebbleAuth",
+    "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
+    "versionCode": 5,
+    "capabilities": [
+        "configurable"
+    ],
+    "longName": "PebbleAuth",
     "watchapp": {
         "watchface": false
     },
     "appKeys": {
-        "key_count": 0,
-        "font_style": 7,
-        "transmit_key": 2,
-        "timezone": 3,
         "delete_all": 8,
-        "delete_key": 6,
+        "timezone": 3,
+        "font_style": 7,
         "show_message": 4,
+        "delete_key": 6,
+        "transmit_key": 2,
         "request_key": 1,
+        "key_count": 0,
         "theme": 5
     },
-    "companyName": "JumpMaster"
+    "versionLabel": "1.4"
 }

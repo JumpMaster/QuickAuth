@@ -240,7 +240,7 @@ void finish_refreshing() {
 		if (watch_otp_count)
 			strcpy(label_text, otp_labels[otp_selected]);
 		else
-			strcpy(label_text, "NO");
+			strcpy(label_text, "TEST");
 		
 		if (fonts_changed)
 			set_fonts();
@@ -270,7 +270,7 @@ void finish_refreshing() {
 	if (watch_otp_count)
 		strcpy(pin_text, generateCode(otp_keys[otp_selected], timezone_offset));
 	else
-		strcpy(pin_text, "SECRETS");
+		strcpy(pin_text, "123456");
 	
 	otp_updated_at_tick = otp_update_tick;
 	
@@ -320,10 +320,10 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 	
 	finish.size.w = finish.size.w * boxpercent;
 	
-//	if (seconds % 30 == 0)
-//		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, false);
-//	else
-//		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, 900, false);
+	if (seconds % 30 == 0)
+		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, false);
+	else
+		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, 900, false);
 }
 
 void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
