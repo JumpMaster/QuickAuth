@@ -30,6 +30,7 @@ enum {
 	PS_THEME,
 	PS_DEFAULT_KEY,
 	PS_FONT_STYLE,
+	PS_IDLE_TIMEOUT,
 	PS_SECRET = 0x40 // Needs 16 spaces, should always be last
 };
 
@@ -43,7 +44,8 @@ enum {
 	JS_THEME,
 	JS_DELETE_KEY,
 	JS_FONT_STYLE,
-	JS_DELETE_ALL
+	JS_DELETE_ALL,
+	JS_IDLE_TIMEOUT
 };
 
 enum { 

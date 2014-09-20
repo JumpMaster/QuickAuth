@@ -6,10 +6,11 @@ var otp_count = 0;
 var theme = 0;
 var font_style = 0;
 var timezoneOffset = 0;
+var idle_timeout = 0;
 var message_send_retries = 0;
 var message_send_max_retries = 5;
 var app_version = 6;
-var debug = true;
+var debug = false;
 
 function loadLocalVariables() {
 
@@ -24,11 +25,12 @@ function loadLocalVariables() {
 	
 	theme = parseInt(localStorage.getItem("theme"));
 	font_style = parseInt(localStorage.getItem("font_style"));
-	
+	idle_timeout = localStorage.getItem("idle_timeout");
 	timezoneOffset = new Date().getTimezoneOffset();
 	
 	theme = !theme ? 0 : theme;
 	font_style = !font_style ? 0 : font_style;
+	idle_timeout = idle_timeout === null ? 300 : parseInt(idle_timeout);
 }
 
 function sendAppMessage(data) {
@@ -66,7 +68,8 @@ Pebble.addEventListener("ready",
 									"key_count":otp_count, 
 									"theme":theme, 
 									"timezone":timezoneOffset,
-									"font_style":font_style
+									"font_style":font_style,
+									"idle_timeout":idle_timeout
 									});
 
 								if (debug) {
@@ -74,6 +77,7 @@ Pebble.addEventListener("ready",
 									console.log("INFO: theme="+theme);
 									console.log("INFO: timezoneOffset="+timezoneOffset);
 									console.log("INFO: font_style="+font_style);
+									console.log("INFO: idle_timeout="+idle_timeout);
 								}
 								
 								// ####### CLEAN APP ##############
@@ -83,6 +87,7 @@ Pebble.addEventListener("ready",
 //								}
 //								localStorage.removeItem("theme");
 //								localStorage.removeItem("font_style");
+//								localStorage.removeItem("idle_timeout");
 								// ####### /CLEAN APP ##############
 							}
 						);
@@ -136,7 +141,8 @@ Pebble.addEventListener('showConfiguration', function(e) {
 		app_version+'/'+
 		'?otp_count='+otp_count+
 		'&theme='+theme+
-		'&font_style='+font_style;
+		'&font_style='+font_style+
+		'&idle_timeout='+idle_timeout;
 	
 	if (debug)
 		console.log("INFO: "+url);
@@ -179,7 +185,16 @@ Pebble.addEventListener("webviewclosed",
 									localStorage.setItem("font_style",font_style);
 									config.font_style = font_style;
 								}
-
+								
+								if(!isNaN(configuration.idle_timeout) && configuration.idle_timeout != idle_timeout) {
+									if (debug)
+										console.log("INFO: Idle timeout changed");
+									
+									idle_timeout = configuration.idle_timeout;
+									localStorage.setItem("idle_timeout",idle_timeout);
+									config.idle_timeout = idle_timeout;
+								}
+								
 								if(configuration.label && configuration.secret) {
 									var secret = configuration.secret
 										.replace(/0/g,"O")

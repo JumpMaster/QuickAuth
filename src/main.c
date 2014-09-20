@@ -13,7 +13,7 @@
 #define MAX_LABEL_LENGTH 21 // 20 + termination
 #define MAX_KEY_LENGTH 65 // 64 + termination
 #define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
-#define DEBUG true
+#define DEBUG false
 
 // Main Window
 Window *main_window;
@@ -62,6 +62,8 @@ unsigned int theme = 0;  // 0 = Dark, 1 = Light
 
 unsigned int phone_otp_count = 0;
 unsigned int watch_otp_count = 0;
+unsigned int idle_second_count = 0;
+unsigned int idle_timeout = 300;
 unsigned int otp_selected = 0;
 unsigned int otp_default = 0;
 unsigned int otp_update_tick = 0;
@@ -81,6 +83,10 @@ void refresh_screen_data(int direction) {
 	perform_full_refresh = true;
 	animation_direction = direction;
 	start_refreshing();
+}
+
+void resetIdleTime() {
+	idle_second_count = 0;
 }
 
 void update_screen_fonts() {
@@ -240,7 +246,7 @@ void finish_refreshing() {
 		if (watch_otp_count)
 			strcpy(label_text, otp_labels[otp_selected]);
 		else
-			strcpy(label_text, "TEST");
+			strcpy(label_text, "EMPTY");
 		
 		if (fonts_changed)
 			set_fonts();
@@ -300,6 +306,18 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 	
 	int seconds = tick_time->tm_sec;
 	
+	if (idle_timeout > 0) {
+		// If app is idle after X minutes then exit
+		if (idle_second_count >= idle_timeout) {
+			if (DEBUG)
+				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Timer reached %d, exiting", idle_second_count);
+			window_stack_pop_all(true);
+			return;
+		}
+		else
+			idle_second_count += 1;	
+	}
+	
 	if (seconds % 30 == 0)
 		otp_update_tick++;
 			
@@ -327,6 +345,7 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 }
 
 void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
+	resetIdleTime();
 	if (watch_otp_count) {
 		if (otp_selected == 0)
 			otp_selected = (watch_otp_count-1);
@@ -338,6 +357,7 @@ void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 void down_single_click_handler(ClickRecognizerRef recognizer, void *context) {
+	resetIdleTime();
 	if (watch_otp_count) {
 		if (otp_selected == (watch_otp_count-1))
 			otp_selected = 0;
@@ -377,6 +397,7 @@ void request_key(int code_id) {
 }
 
 void details_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context) {
+	resetIdleTime();
 	otp_default = details_selected_key;
 	persist_write_int(PS_DEFAULT_KEY, otp_default);
 	
@@ -390,6 +411,7 @@ void details_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *con
 }
 
 void details_actionbar_down_click_handler(ClickRecognizerRef recognizer, void *context) {
+	resetIdleTime();
 	request_delete(otp_keys[details_selected_key]);
 
 	window_stack_remove(select_window, false);
@@ -458,6 +480,7 @@ void details_window_unload(Window *window) {
 }
 
 static void key_menu_select_callback(int index, void *ctx) {
+	resetIdleTime();
 	details_selected_key = index;	
 	
 	details_window = window_create();
@@ -511,6 +534,7 @@ void select_window_unload(Window *window) {
 }
 
 void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {
+	resetIdleTime();
 	if (watch_otp_count) {
 		select_window = window_create();
 		window_set_window_handlers(select_window, (WindowHandlers) {
@@ -625,6 +649,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 	if (DEBUG)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Message Recieved");
 	
+	resetIdleTime();
 	Tuple *key_count_tuple = dict_find(iter, JS_KEY_COUNT);
 	Tuple *key_tuple = dict_find(iter, JS_TRANSMIT_KEY);
 	Tuple *key_delete_tuple = dict_find(iter, JS_DELETE_KEY);
@@ -632,6 +657,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 	Tuple *theme_tuple = dict_find(iter, JS_THEME);
 	Tuple *font_style_tuple = dict_find(iter, JS_FONT_STYLE);
 	Tuple *delete_all_tuple = dict_find(iter, JS_DELETE_ALL);
+	Tuple *idle_timeout_tuple = dict_find(iter, JS_IDLE_TIMEOUT);
 	
 	// Act on the found fields received
 	if (delete_all_tuple) {
@@ -744,6 +770,17 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Font style: %d", font_style);
 		}
 	} // font_style_tuple
+	
+	if (idle_timeout_tuple) {
+		unsigned int idle_timeout_value = idle_timeout_tuple->value->int16;
+		if (idle_timeout != idle_timeout_value) {
+			idle_timeout = idle_timeout_value;
+			persist_write_int(PS_IDLE_TIMEOUT, idle_timeout);
+
+			if (DEBUG)
+				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Idle Timeout: %d", idle_timeout);
+		}
+	} // idle_timeout_tuple
 }
 
 void in_dropped_handler(AppMessageResult reason, void *context) {
@@ -757,6 +794,7 @@ void load_persistent_data() {
 	theme = persist_exists(PS_THEME) ? persist_read_int(PS_THEME) : 0;
 	otp_default = persist_exists(PS_DEFAULT_KEY) ? persist_read_int(PS_DEFAULT_KEY) : 0;
 	font_style = persist_exists(PS_FONT_STYLE) ? persist_read_int(PS_FONT_STYLE) : 0;
+	idle_timeout = persist_exists(PS_IDLE_TIMEOUT) ? persist_read_int(PS_IDLE_TIMEOUT) : 300;
 	
 	if (persist_exists(PS_SECRET)) {
 		for(int i = 0; i < MAX_OTP; i++) {
