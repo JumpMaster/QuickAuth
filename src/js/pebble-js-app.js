@@ -17,7 +17,7 @@ function loadLocalVariables() {
 	for (var i=0; i<MAX_OTP; i++)
 	{
 		var tempKey = localStorage.getItem("secret_pair"+i);
-		if (tempKey)
+		if (tempKey !== null)
 			otp_count++;
 		else
 			break;
@@ -137,6 +137,9 @@ Pebble.addEventListener("appmessage",
 							});
 
 Pebble.addEventListener('showConfiguration', function(e) {
+	// Disable timeout while in configuration menu
+	sendAppMessage({"idle_timeout":0});
+	
 	var url = 'http://oncloudvirtual.com/pebble/pebbleauth/v'+
 		app_version+'/'+
 		'?otp_count='+otp_count+
@@ -158,7 +161,7 @@ Pebble.addEventListener("webviewclosed",
 								if(!isNaN(configuration.delete_all)) {
 									if (debug)
 										console.log("INFO: Delete all requested");
-									for (i = 0; i <= MAX_OTP;i++) {
+									for (i = 0; i < MAX_OTP;i++) {
 										if (debug)
 											console.log("INFO: Deleting key "+i);
 										localStorage.removeItem('secret_pair'+i);
@@ -192,8 +195,10 @@ Pebble.addEventListener("webviewclosed",
 									
 									idle_timeout = configuration.idle_timeout;
 									localStorage.setItem("idle_timeout",idle_timeout);
-									config.idle_timeout = idle_timeout;
 								}
+								// Always send idle_timeout to reset it after
+								// it was disabled while configuring
+								config.idle_timeout = idle_timeout;
 								
 								if(configuration.label && configuration.secret) {
 									var secret = configuration.secret

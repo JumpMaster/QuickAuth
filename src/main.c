@@ -117,6 +117,12 @@ void expand_key(char *inputString, bool new_code) {
 	}
 	otp_key[outputChar] = '\0';
 	
+	// If the label or key are null ignore them
+	if (otp_label == '\0' || otp_key == '\0') {
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: NULL key or label, ignoring");
+		return;
+	}
+	
 	bool updating_label = false;
 	if (new_code) {
 		for(unsigned int i = 0; i < watch_otp_count; i++) {
@@ -664,7 +670,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		if (DEBUG)
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Delete all requested");
 		
-		for (unsigned int i = 0; i <= MAX_OTP; i++) {
+		for (unsigned int i = 0; i < MAX_OTP; i++) {
 			if (DEBUG)
 				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Deleting key: %d", i);
 			persist_delete(PS_SECRET+i);
@@ -776,7 +782,8 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		if (idle_timeout != idle_timeout_value) {
 			idle_timeout = idle_timeout_value;
 			persist_write_int(PS_IDLE_TIMEOUT, idle_timeout);
-
+			resetIdleTime();
+			
 			if (DEBUG)
 				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Idle Timeout: %d", idle_timeout);
 		}
