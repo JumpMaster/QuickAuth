@@ -10,7 +10,7 @@ var idle_timeout = 0;
 var message_send_retries = 0;
 var message_send_max_retries = 5;
 var app_version = 6;
-var debug = false;
+var debug = true;
 
 function loadLocalVariables() {
 
@@ -166,7 +166,7 @@ Pebble.addEventListener("webviewclosed",
 											console.log("INFO: Deleting key "+i);
 										localStorage.removeItem('secret_pair'+i);
 									}
-									
+									otp_count = 0;
 									sendAppMessage(configuration);
 									return;
 								}
@@ -201,6 +201,7 @@ Pebble.addEventListener("webviewclosed",
 								config.idle_timeout = idle_timeout;
 								
 								if(configuration.label && configuration.secret) {
+									
 									var secret = configuration.secret
 										.replace(/0/g,"O")
 										.replace(/1/g, "I")

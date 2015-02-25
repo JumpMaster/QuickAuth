@@ -20,28 +20,39 @@
     "resources": {
         "media": [
             {
+                "file": "images/auth_icon.png",
+                "menuIcon": true,
+                "name": "IMAGE_ICON",
+                "type": "png"
+            },
+            {
                 "characterRegex": "[0-9]",
+                "compatibility": "2.7",
                 "file": "fonts/BD_Cartoon_Shout.ttf",
                 "name": "FONT_BD_CARTOON_28",
                 "type": "font"
             },
             {
+                "compatibility": "2.7",
                 "file": "fonts/BD_Cartoon_Shout.ttf",
                 "name": "FONT_BD_CARTOON_20",
                 "type": "font"
             },
             {
                 "characterRegex": "[0-9]",
+                "compatibility": "2.7",
                 "file": "fonts/ANDROID_24.ttf",
                 "name": "FONT_DIGITAL_38",
                 "type": "font"
             },
             {
+                "compatibility": "2.7",
                 "file": "fonts/ANDROID_24.ttf",
                 "name": "FONT_DIGITAL_28",
                 "type": "font"
             },
             {
+                "compatibility": "2.7",
                 "file": "fonts/UNISPACE_20.ttf",
                 "name": "FONT_UNISPACE_20",
                 "type": "font"
@@ -57,27 +68,23 @@
                 "type": "png"
             },
             {
+                "compatibility": "2.7",
                 "file": "fonts/ORBITRON_28.ttf",
                 "name": "FONT_ORBITRON_28",
                 "type": "font"
             },
             {
+                "compatibility": "2.7",
                 "file": "fonts/BITWISE_32.ttf",
                 "name": "FONT_BITWISE_32",
                 "type": "font"
-            },
-            {
-                "file": "images/auth_icon.png",
-                "menuIcon": true,
-                "name": "IMAGE_ICON",
-                "type": "png"
             }
         ]
     },
     "shortName": "PebbleAuth",
     "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
     "versionCode": 5,
-    "versionLabel": "1.4",
+    "versionLabel": "1.5",
     "watchapp": {
         "watchface": false
     }

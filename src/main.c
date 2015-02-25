@@ -13,7 +13,7 @@
 #define MAX_LABEL_LENGTH 21 // 20 + termination
 #define MAX_KEY_LENGTH 65 // 64 + termination
 #define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
-#define DEBUG false
+#define DEBUG true
 
 // Main Window
 Window *main_window;
@@ -677,6 +677,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		}
 		otp_default = 0;
 		watch_otp_count = 0;
+		phone_otp_count = 0;
 		otp_selected = 0;
 		persist_write_int(PS_DEFAULT_KEY, otp_default);
 		refresh_screen_data(DOWN);
