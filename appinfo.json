@@ -20,6 +20,16 @@
     "resources": {
         "media": [
             {
+                "file": "images/Pebble_Star.png",
+                "name": "IMAGE_ICON_STAR",
+                "type": "png"
+            },
+            {
+                "file": "images/Pebble_Bin.png",
+                "name": "IMAGE_ICON_TRASH",
+                "type": "png"
+            },
+            {
                 "file": "images/auth_icon.png",
                 "menuIcon": true,
                 "name": "IMAGE_ICON",
@@ -58,16 +68,6 @@
                 "type": "font"
             },
             {
-                "file": "images/Yes.png",
-                "name": "IMAGE_ICON_YES",
-                "type": "png"
-            },
-            {
-                "file": "images/No.png",
-                "name": "IMAGE_ICON_NO",
-                "type": "png"
-            },
-            {
                 "compatibility": "2.7",
                 "file": "fonts/ORBITRON_28.ttf",
                 "name": "FONT_ORBITRON_28",
@@ -81,6 +81,7 @@
             }
         ]
     },
+    "sdkVersion": "2",
     "shortName": "PebbleAuth",
     "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
     "versionCode": 5,

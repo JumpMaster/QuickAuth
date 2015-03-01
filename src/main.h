@@ -18,11 +18,22 @@
 #ifndef _MAIN_H_
 #define _MAIN_H_
 
+#include "pebble.h"
+	
 typedef struct {
 	GFont font;
 	bool isCustom;
 } AppFont;
 
+#define MAX_OTP 16
+#define MAX_LABEL_LENGTH 21 // 20 + termination
+#define MAX_KEY_LENGTH 65 // 64 + termination
+#define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
+#define APP_VERSION 7
+#define DEBUG false
+
+#define MyTupletCString(_key, _cstring) \
+((const Tuplet) { .type = TUPLE_CSTRING, .key = _key, .cstring = { .data = _cstring, .length = strlen(_cstring) + 1 }})
 
 // Persistant Storage Keys
 enum {

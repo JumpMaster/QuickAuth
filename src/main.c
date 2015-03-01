@@ -7,13 +7,7 @@
 
 #include "pebble.h"
 #include "main.h"
-#include "google-authenticator.c"
-
-#define MAX_OTP 16
-#define MAX_LABEL_LENGTH 21 // 20 + termination
-#define MAX_KEY_LENGTH 65 // 64 + termination
-#define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
-#define DEBUG true
+#include "google-authenticator.h"
 
 // Main Window
 Window *main_window;
@@ -95,6 +89,12 @@ void update_screen_fonts() {
 }
 
 void expand_key(char *inputString, bool new_code) {
+	if (strstr(inputString, ":") == NULL) {
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: SUPER NULL input string, ignoring");
+		return;
+	}
+	
 	bool colonFound = false;
 	int outputChar = 0;
 	
@@ -118,7 +118,7 @@ void expand_key(char *inputString, bool new_code) {
 	otp_key[outputChar] = '\0';
 	
 	// If the label or key are null ignore them
-	if (otp_label == '\0' || otp_key == '\0') {
+	if (strlen(otp_label) <= 0 || strlen(otp_key) <= 2) {
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: NULL key or label, ignoring");
 		return;
 	}
@@ -392,7 +392,7 @@ void request_delete(char *delete_key) {
 	if (DEBUG)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Pebble Requesting delete: %s", delete_key);
 
-	sendJSMessage(TupletCString(JS_DELETE_KEY, delete_key));
+	sendJSMessage(MyTupletCString(JS_DELETE_KEY, delete_key));
 }
 
 void request_key(int code_id) {
@@ -400,6 +400,24 @@ void request_key(int code_id) {
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Requesting code: %d", code_id);
 
 	sendJSMessage(TupletInteger(JS_REQUEST_KEY, code_id));
+}
+
+void send_key(int requested_key) {
+	if (DEBUG)
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Phone Requesting key: %d", requested_key);
+
+	char keylabelpair[MAX_COMBINED_LENGTH];
+	
+	if (persist_exists(PS_SECRET+requested_key)) {
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: SENDING CODE FROM LOCATION %d", PS_SECRET+requested_key);
+
+		persist_read_string(PS_SECRET+requested_key, keylabelpair, MAX_COMBINED_LENGTH);
+	}
+	else
+		strcat(keylabelpair,"NULL");
+
+	sendJSMessage(MyTupletCString(JS_TRANSMIT_KEY, keylabelpair));
 }
 
 void details_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -463,8 +481,8 @@ static void details_window_load(Window *window) {
 	
 	text_layer_set_text(details_title_layer, otp_labels[details_selected_key]);
 	
-	image_icon_yes = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_YES);
-	image_icon_no = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_NO);
+	image_icon_yes = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_STAR);
+	image_icon_no = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_TRASH);
 	
 	// Initialize the action bar:
 	details_action_bar_layer = action_bar_layer_create();
@@ -664,6 +682,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 	Tuple *font_style_tuple = dict_find(iter, JS_FONT_STYLE);
 	Tuple *delete_all_tuple = dict_find(iter, JS_DELETE_ALL);
 	Tuple *idle_timeout_tuple = dict_find(iter, JS_IDLE_TIMEOUT);
+	Tuple *key_request_tuple = dict_find(iter, JS_REQUEST_KEY);
 	
 	// Act on the found fields received
 	if (delete_all_tuple) {
@@ -684,11 +703,10 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 	} // delete_all_tuple
 	
 	if (key_count_tuple) {
-		if (DEBUG) {
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Key count from watch: %d", watch_otp_count);
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Key count from phone: %d", key_count_tuple->value->int16);
-		}
 		phone_otp_count = key_count_tuple->value->int16;
+		
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Key count from watch: %d", watch_otp_count);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Key count from phone: %d", phone_otp_count);
 		
 		if (watch_otp_count < phone_otp_count) {
 			if (DEBUG)
@@ -789,6 +807,11 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Idle Timeout: %d", idle_timeout);
 		}
 	} // idle_timeout_tuple
+	
+	if (key_request_tuple) {
+		int requested_key_value = key_request_tuple->value->int16;
+		send_key(requested_key_value);
+	} // key_request_tuple
 }
 
 void in_dropped_handler(AppMessageResult reason, void *context) {
@@ -809,8 +832,13 @@ void load_persistent_data() {
 			if (persist_exists(PS_SECRET+i)) {
 				if (DEBUG)
 					APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: LOADING CODE FROM LOCATION %d", PS_SECRET+i);
+				
 				char keylabelpair[MAX_COMBINED_LENGTH];
 				persist_read_string(PS_SECRET+i, keylabelpair, MAX_COMBINED_LENGTH);
+				
+				if (DEBUG)
+					APP_LOG(APP_LOG_LEVEL_DEBUG, "'%s'", keylabelpair);
+				
 				expand_key(keylabelpair, false);
 			}
 			else

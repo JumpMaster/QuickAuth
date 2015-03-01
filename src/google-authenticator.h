@@ -1,7 +1,12 @@
-// SHA1 header file
+// Helper program to generate a new secret for use in two-factor
+// authentication.
 //
 // Copyright 2010 Google Inc.
 // Author: Markus Gutschke
+//
+// Adapted for the Pebble Smartwatch
+// Author: Kevin Cooper
+// https://github.com/JumpMaster/PebbleAuth
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,26 +20,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SHA1_H__
-#define SHA1_H__
+#ifndef _GOOGLEAUTHENTICATOR_H_
+#define _GOOGLEAUTHENTICATOR_H_
 
 #include <stdint.h>
 
-#define SHA1_BLOCKSIZE     64
-#define SHA1_DIGEST_LENGTH 20
-
-typedef struct {
-  uint32_t digest[8];
-  uint32_t count_lo, count_hi;
-  uint8_t  data[SHA1_BLOCKSIZE];
-  int      local;
-} SHA1_INFO;
-
-void sha1_init(SHA1_INFO *sha1_info)
+#define VERIFICATION_CODE_MODULUS (1000*1000) // Six digits
+#define BITS_PER_BASE32_CHAR      5           // Base32 expands space by 8/5
+	
+char *generateCode(const char *key, int timezone_offset)
 	__attribute__((visibility("hidden")));
-void sha1_update(SHA1_INFO *sha1_info, const uint8_t *buffer, int count)
-  __attribute__((visibility("hidden")));
-void sha1_final(SHA1_INFO *sha1_info, uint8_t digest[20])
-  __attribute__((visibility("hidden")));
 
-#endif
+#endif /* _GOOGLEAUTHENTICATOR_H_ */
