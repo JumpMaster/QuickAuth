@@ -1,5 +1,6 @@
 {
     "appKeys": {
+        "basalt_colors": 10,
         "delete_all": 8,
         "delete_key": 6,
         "font_style": 7,
@@ -9,7 +10,8 @@
         "show_message": 4,
         "theme": 5,
         "timezone": 3,
-        "transmit_key": 2
+        "transmit_key": 2,
+        "watch_version_request": 11
     },
     "capabilities": [
         "configurable"
@@ -20,14 +22,46 @@
     "resources": {
         "media": [
             {
-                "file": "images/Pebble_Star.png",
-                "name": "IMAGE_ICON_STAR",
+                "file": "images/Pebble_Star2.png",
+                "name": "PBI_IMAGE_ICON_STAR",
                 "type": "png"
             },
             {
-                "file": "images/Pebble_Bin.png",
-                "name": "IMAGE_ICON_TRASH",
-                "type": "png"
+                "file": "fonts/BITWISE_32.ttf",
+                "name": "FONT_BITWISE_32",
+                "type": "font"
+            },
+            {
+                "file": "fonts/ORBITRON_28.ttf",
+                "name": "FONT_ORBITRON_28",
+                "type": "font"
+            },
+            {
+                "file": "fonts/UNISPACE_20.ttf",
+                "name": "FONT_UNISPACE_20",
+                "type": "font"
+            },
+            {
+                "characterRegex": "[0-9]",
+                "file": "fonts/ANDROID_24.ttf",
+                "name": "FONT_DIGITAL_38",
+                "type": "font"
+            },
+            {
+                "file": "fonts/ANDROID_24.ttf",
+                "name": "FONT_DIGITAL_28",
+                "type": "font"
+            },
+            {
+                "characterRegex": "[0-9]",
+                "file": "fonts/BD_Cartoon_Shout.ttf",
+                "name": "FONT_BD_CARTOON_28",
+                "type": "font"
+            },
+            {
+                "file": "fonts/BD_Cartoon_Shout.ttf",
+                "name": "FONT_BD_CARTOON_20",
+                "type": "font"
             },
             {
                 "file": "images/auth_icon.png",
@@ -36,56 +70,21 @@
                 "type": "png"
             },
             {
-                "characterRegex": "[0-9]",
-                "compatibility": "2.7",
-                "file": "fonts/BD_Cartoon_Shout.ttf",
-                "name": "FONT_BD_CARTOON_28",
-                "type": "font"
-            },
-            {
-                "compatibility": "2.7",
-                "file": "fonts/BD_Cartoon_Shout.ttf",
-                "name": "FONT_BD_CARTOON_20",
-                "type": "font"
-            },
-            {
-                "characterRegex": "[0-9]",
-                "compatibility": "2.7",
-                "file": "fonts/ANDROID_24.ttf",
-                "name": "FONT_DIGITAL_38",
-                "type": "font"
-            },
-            {
-                "compatibility": "2.7",
-                "file": "fonts/ANDROID_24.ttf",
-                "name": "FONT_DIGITAL_28",
-                "type": "font"
-            },
-            {
-                "compatibility": "2.7",
-                "file": "fonts/UNISPACE_20.ttf",
-                "name": "FONT_UNISPACE_20",
-                "type": "font"
-            },
-            {
-                "compatibility": "2.7",
-                "file": "fonts/ORBITRON_28.ttf",
-                "name": "FONT_ORBITRON_28",
-                "type": "font"
-            },
-            {
-                "compatibility": "2.7",
-                "file": "fonts/BITWISE_32.ttf",
-                "name": "FONT_BITWISE_32",
-                "type": "font"
+                "file": "images/Pebble_Bin.png",
+                "name": "PNG_IMAGE_ICON_TRASH",
+                "type": "png"
             }
         ]
     },
-    "sdkVersion": "2",
+    "sdkVersion": "3",
     "shortName": "PebbleAuth",
+    "targetPlatforms": [
+        "aplite",
+        "basalt"
+    ],
     "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
     "versionCode": 5,
-    "versionLabel": "1.6",
+    "versionLabel": "2.0",
     "watchapp": {
         "watchface": false
     }

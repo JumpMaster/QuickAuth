@@ -1,5 +1,5 @@
 //
-// Copyright 2014
+// Copyright 2015
 // PebbleAuth for the Pebble Smartwatch
 // Author: Kevin Cooper
 // https://github.com/JumpMaster/PebbleAuth
@@ -8,15 +8,18 @@
 #include "pebble.h"
 #include "main.h"
 #include "google-authenticator.h"
+#include <ctype.h>
 
 // Main Window
 Window *main_window;
 static TextLayer *countdown_layer;
 static TextLayer *text_pin_layer;
 static TextLayer *text_label_layer;
+static TextLayer *swipe_layer;
 
 static GRect text_pin_rect;
 static GRect text_label_rect;
+static GRect countdown_rect;
 static GRect display_bounds;
 
 // Selection Window
@@ -30,8 +33,8 @@ Window *details_window;
 static TextLayer *details_title_layer;
 static TextLayer *details_key_layer;
 static ActionBarLayer *details_action_bar_layer;
-static GBitmap *image_icon_yes;
-static GBitmap *image_icon_no;
+static GBitmap *image_icon_fav;
+static GBitmap *image_icon_del;
 
 // Colors
 static GColor bg_color;
@@ -43,7 +46,6 @@ static AppFont font_pin;
 static AppFont font_label;
 static GFont font_UNISPACE_20;
 
-bool perform_full_refresh = true;	// Start refreshing at launch
 bool fonts_changed;
 bool loading_complete = false;
 
@@ -52,7 +54,6 @@ unsigned int js_message_retry_count = 0;
 unsigned int js_message_max_retry_count = 5;
 
 int timezone_offset = 0;
-unsigned int theme = 0;  // 0 = Dark, 1 = Light
 
 unsigned int phone_otp_count = 0;
 unsigned int watch_otp_count = 0;
@@ -63,20 +64,31 @@ unsigned int otp_default = 0;
 unsigned int otp_update_tick = 0;
 unsigned int otp_updated_at_tick = 0;
 unsigned int requesting_code = 0;
-unsigned int animation_direction = RIGHT;
+unsigned int animation_direction = LEFT;
+unsigned int animation_state = 0;
+unsigned int animation_count = 0;
+bool override_second_counter = false;
 
 char otp_labels[MAX_OTP][MAX_LABEL_LENGTH];
 char otp_keys[MAX_OTP][MAX_KEY_LENGTH];
 char label_text[MAX_LABEL_LENGTH];
 char pin_text[MAX_KEY_LENGTH];
 
+#ifdef PBL_COLOR
+	char basalt_colors[13];
+#else
+	unsigned int aplite_theme = 0;  // 0 = Dark, 1 = Light
+#endif
+
+// MAIN APP
+
 void refresh_screen_data(int direction) {
 	if (!loading_complete)
 		return;
 	
-	perform_full_refresh = true;
 	animation_direction = direction;
-	start_refreshing();
+	animation_state = 40;
+	animation_control();
 }
 
 void resetIdleTime() {
@@ -157,8 +169,10 @@ void expand_key(char *inputString, bool new_code) {
 		otp_selected = watch_otp_count-1;
 		refresh_screen_data(DOWN);
 	}
-	
-	if (phone_otp_count > 0 && phone_otp_count < requesting_code) {
+}
+
+void check_load_status() {
+	if ((phone_otp_count > 0 && phone_otp_count < requesting_code) || requesting_code > MAX_OTP) {
 		requesting_code = 0;
 		loading_complete = true;
 		refresh_screen_data(DOWN);
@@ -170,66 +184,75 @@ void expand_key(char *inputString, bool new_code) {
 void on_animation_stopped(Animation *anim, bool finished, void *context) {
 	//Free the memory used by the Animation
 	property_animation_destroy((PropertyAnimation*) anim);
+	anim = NULL;
 }
 
-void on_animation_stopped_finish(Animation *anim, bool finished, void *context) {
-	//Free the memory used by the Animation
-	property_animation_destroy((PropertyAnimation*) anim);
-	
-	finish_refreshing();
+void on_animation_stopped_callback(Animation *anim, bool finished, void *context) {
+	#ifdef PBL_PLATFORM_APLITE
+		on_animation_stopped(anim, finished, context);
+	#endif
+	animation_control();
 }
 
-void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *finish, int duration, bool finish_after_animation) {
+void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *finish, int duration, bool callback) {
 	//Declare animation
 	PropertyAnimation *anim = property_animation_create_layer_frame(layer, start, finish);
-	
+
 	//Set characteristics
 	animation_set_duration((Animation*) anim, duration);
 	animation_set_curve((Animation*) anim, curve);
+	
 
-	if (finish_after_animation) {
-		//Set stopped handler to free memory
+	if (callback) {
 		AnimationHandlers handlers = {
-			.stopped = (AnimationStoppedHandler) on_animation_stopped_finish
-		};
-		animation_set_handlers((Animation*) anim, handlers, NULL);
-	} else {
-		AnimationHandlers handlers = {
-			.stopped = (AnimationStoppedHandler) on_animation_stopped
+			.stopped = (AnimationStoppedHandler) on_animation_stopped_callback
 		};
 		animation_set_handlers((Animation*) anim, handlers, NULL);
 	}
 	
-	//Start animation!
-	animation_schedule((Animation*) anim);
+	#ifdef PBL_PLATFORM_APLITE
+		if (!callback) {
+			AnimationHandlers handlers = {
+				.stopped = (AnimationStoppedHandler) on_animation_stopped
+			};
+			animation_set_handlers((Animation*) anim, handlers, NULL);
+		}
+	#endif
+		
+	//Start animation!	
+	animation_schedule((Animation*) anim); 
 }
 
-void start_refreshing() {
-	if (perform_full_refresh)
-	{
-		GRect finish = text_label_rect;
-		
-		switch(animation_direction)
-		{
-			case UP :
-				finish.origin.y -= display_bounds.size.h;
-				break;
-			case DOWN :
-				finish.origin.y += display_bounds.size.h;
-				break;
-			case LEFT :
-				finish.origin.x -= display_bounds.size.w;
-				break;
-			case RIGHT :
-				finish.origin.x += display_bounds.size.w;
-				break;
-		}
-		animate_layer(text_layer_get_layer(text_label_layer), AnimationCurveEaseIn, &text_label_rect, &finish, 300, false);
-	}
+void animate_label_on() {
 	
-	GRect finish = text_pin_rect;
+	if (watch_otp_count)
+		strcpy(label_text, otp_labels[otp_selected]);
+	else
+		strcpy(label_text, "EMPTY");
+	
+	GRect start = text_label_rect;
 	switch(animation_direction)
 	{
+		case UP :
+			start.origin.y += display_bounds.size.h;
+			break;
+		case DOWN :
+			start.origin.y -= display_bounds.size.h;
+			break;
+		case LEFT :
+			start.origin.x += display_bounds.size.w;
+			break;
+		case RIGHT :
+			start.origin.x -= display_bounds.size.w;
+			break;
+	}
+	animate_layer(text_layer_get_layer(text_label_layer), AnimationCurveEaseOut, &start, &text_label_rect, 300, true);
+}
+
+void animate_label_off() {
+	GRect finish = text_label_rect;
+		
+	switch(animation_direction) {
 		case UP :
 			finish.origin.y -= display_bounds.size.h;
 			break;
@@ -243,42 +266,10 @@ void start_refreshing() {
 			finish.origin.x += display_bounds.size.w;
 			break;
 	}
-	animate_layer(text_layer_get_layer(text_pin_layer), AnimationCurveEaseIn, &text_pin_rect, &finish, 300, true);;
+	animate_layer(text_layer_get_layer(text_label_layer), AnimationCurveEaseIn, &text_label_rect, &finish, 300, true);
 }
 
-void finish_refreshing() {	
-	if (perform_full_refresh)
-	{
-		if (watch_otp_count)
-			strcpy(label_text, otp_labels[otp_selected]);
-		else
-			strcpy(label_text, "EMPTY");
-		
-		if (fonts_changed)
-			set_fonts();
-		
-		GRect start = text_label_rect;
-		switch(animation_direction)
-		{
-			case UP :
-				start.origin.y += display_bounds.size.h;
-				break;
-			case DOWN :
-				start.origin.y -= display_bounds.size.h;
-				break;
-			case LEFT :
-				start.origin.x += display_bounds.size.w;
-				break;
-			case RIGHT :
-				start.origin.x -= display_bounds.size.w;
-				break;
-		}
-		animate_layer(text_layer_get_layer(text_label_layer), AnimationCurveEaseOut, &start, &text_label_rect, 300, false);
-		perform_full_refresh = false;
-	}
-	else
-		animation_direction = LEFT;
-	
+void animate_code_on() {
 	if (watch_otp_count)
 		strcpy(pin_text, generateCode(otp_keys[otp_selected], timezone_offset));
 	else
@@ -302,15 +293,126 @@ void finish_refreshing() {
 			start.origin.x -= display_bounds.size.w;
 			break;
 	}
-	animate_layer(text_layer_get_layer(text_pin_layer), AnimationCurveEaseOut, &start, &text_pin_rect, 300, false);
+	animate_layer(text_layer_get_layer(text_pin_layer), AnimationCurveEaseOut, &start, &text_pin_rect, 300, true);
+}
+
+void animate_code_off() {
+	GRect finish = text_pin_rect;
+	switch(animation_direction)
+	{
+		case UP :
+			finish.origin.y -= display_bounds.size.h;
+			break;
+		case DOWN :
+			finish.origin.y += display_bounds.size.h;
+			break;
+		case LEFT :
+			finish.origin.x -= display_bounds.size.w;
+			break;
+		case RIGHT :
+			finish.origin.x += display_bounds.size.w;
+			break;
+	}
+	animate_layer(text_layer_get_layer(text_pin_layer), AnimationCurveEaseIn, &text_pin_rect, &finish, 300, true);
+}
+
+void animate_second_counter(bool toZero) {
+	time_t temp = time(NULL);
+	struct tm *time = localtime(&temp);
+	int seconds = time->tm_sec;
+	
+	if (seconds % 30 == 0)
+		otp_update_tick++;
+			
+	if	(otp_updated_at_tick != otp_update_tick) {
+		animation_state = 20;
+		animation_control();
+	}
+	
+	// update countdown layer
+	GRect start = layer_get_frame(text_layer_get_layer(countdown_layer));
+	GRect finish = countdown_rect;
+
+	float boxpercent = (30-(seconds%30))/((double)30);
+	
+	finish.size.w = finish.size.w * boxpercent;
+	
+	int animationTime = 900;
+	if (toZero) {
+		finish.origin.y = display_bounds.size.h;
+		//animationTime = 300;
+		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, animationTime, true);
+	} else {
+		if (seconds % 30 == 0) {
+				animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, animationTime, false);
+		}
+		else
+			animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, animationTime, false);
+	}
+}
+
+void animation_control() {	
+	if (animation_count > 0) {
+		animation_count--;
+		return;
+	}
+	
+	switch (animation_state) {
+		case 0: // initial launch, animate the code and label on screen
+			animation_state = 10;
+			if (fonts_changed)
+				set_fonts();
+			animate_code_on();
+			animate_label_on();
+			break;
+		case 10: // just update the second counter
+			override_second_counter = false;
+			break;
+		case 20: // animate the code off screen
+			animation_state = 30;
+			animation_direction = DOWN;
+			animate_code_off();
+			break;
+		case 30: // animate the code on screen
+			animation_state = 10;
+			animation_direction = LEFT;
+			animate_code_on();
+			break;
+		case 40: // animate the code and label off screen
+			animation_state = 0;
+			animation_count = 1;
+			animate_code_off();
+			animate_label_off();
+			break;
+		case 50: // animate the code and label and second counter off screen
+			animation_state = 60;
+			animation_unschedule_all();
+			override_second_counter = true;
+			animation_count = 2;
+			animation_direction = RIGHT;
+			animate_code_off();
+			animate_label_off();
+			animate_second_counter(true);
+			break;
+		case 60: // animate the swipe layer on screen using the background color
+			animation_state = 70;
+			GRect start = GRect(0, display_bounds.size.h*-1, display_bounds.size.w, display_bounds.size.h);
+			swipe_layer = text_layer_create(start);
+			text_layer_set_background_color(swipe_layer, bg_color);
+			Layer *window_layer = window_get_root_layer(main_window);
+			layer_add_child(window_layer, text_layer_get_layer(swipe_layer));
+			animate_layer(text_layer_get_layer(swipe_layer), AnimationCurveEaseInOut, &start, &display_bounds, 500, true);
+			break;
+		case 70: // clear the swipe layer and set the new colors
+			apply_display_colors();
+			text_layer_destroy(swipe_layer);
+			animation_state = 0;
+			animation_control();
+			break;
+	}
 }
 
 static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
-	
-	if (!loading_complete)
-		return;
-	
-	int seconds = tick_time->tm_sec;
 	
 	if (idle_timeout > 0) {
 		// If app is idle after X minutes then exit
@@ -324,30 +426,10 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 			idle_second_count += 1;	
 	}
 	
-	if (seconds % 30 == 0)
-		otp_update_tick++;
-			
-	if	(otp_updated_at_tick != otp_update_tick) {
-		animation_direction = DOWN;
-		start_refreshing();
-	}
-	
-	//
-	// update countdown layer
-	//
-	Layer *window_layer = window_get_root_layer(main_window);
-	GRect bounds = layer_get_bounds(window_layer);
-	
-	GRect start = layer_get_frame(text_layer_get_layer(countdown_layer));
-	GRect finish = (GRect(0, bounds.size.h-10, bounds.size.w, 10));
-	float boxpercent = (30-(seconds%30))/((double)30);
-	
-	finish.size.w = finish.size.w * boxpercent;
-	
-	if (seconds % 30 == 0)
-		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, false);
-	else
-		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, 900, false);
+	if (!loading_complete || override_second_counter)
+		return;
+
+	animate_second_counter(false);
 }
 
 void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -481,22 +563,22 @@ static void details_window_load(Window *window) {
 	
 	text_layer_set_text(details_title_layer, otp_labels[details_selected_key]);
 	
-	image_icon_yes = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_STAR);
-	image_icon_no = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ICON_TRASH);
+	image_icon_fav = gbitmap_create_with_resource(RESOURCE_ID_PBI_IMAGE_ICON_STAR);
+	image_icon_del = gbitmap_create_with_resource(RESOURCE_ID_PNG_IMAGE_ICON_TRASH);
 	
 	// Initialize the action bar:
 	details_action_bar_layer = action_bar_layer_create();
 	action_bar_layer_set_background_color(details_action_bar_layer, fg_color);
 	action_bar_layer_set_click_config_provider(details_action_bar_layer, details_actionbar_config_provider);
-	action_bar_layer_set_icon(details_action_bar_layer, BUTTON_ID_UP, image_icon_yes);
-	action_bar_layer_set_icon(details_action_bar_layer, BUTTON_ID_DOWN, image_icon_no);
+	action_bar_layer_set_icon(details_action_bar_layer, BUTTON_ID_UP, image_icon_fav);
+	action_bar_layer_set_icon(details_action_bar_layer, BUTTON_ID_DOWN, image_icon_del);
 	action_bar_layer_add_to_window(details_action_bar_layer, details_window);
 }
 
 void details_window_unload(Window *window) {
 	action_bar_layer_destroy(details_action_bar_layer);
-	gbitmap_destroy(image_icon_yes);
-	gbitmap_destroy(image_icon_no);
+	gbitmap_destroy(image_icon_fav);
+	gbitmap_destroy(image_icon_del);
 	text_layer_destroy(details_title_layer);
 	text_layer_destroy(details_key_layer);
 	fonts_unload_custom_font(font_UNISPACE_20);
@@ -605,20 +687,76 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
 	}
 }
 
-void set_theme() { 
-	if (theme) {
-		bg_color = GColorWhite;
-		fg_color = GColorBlack;
-	} else {
-		bg_color = GColorBlack;
-		fg_color = GColorWhite;
-	}
-	
+
+void apply_display_colors() {
 	window_set_background_color(main_window, bg_color);
 	text_layer_set_background_color(countdown_layer, fg_color);
 	text_layer_set_text_color(text_label_layer, fg_color);
 	text_layer_set_text_color(text_pin_layer, fg_color);
 }
+
+#ifdef PBL_COLOR
+
+	unsigned int HexStringToUInt(char const* hexstring)
+	{
+		unsigned int result = 0;
+		char const *c = hexstring;
+		unsigned char thisC;
+
+		while( (thisC = *c) != 0 )
+		{
+			thisC = toupper(thisC);
+			result <<= 4;
+
+			if( isdigit(thisC))
+				result += thisC - '0';
+			else if(isxdigit(thisC))
+				result += thisC - 'A' + 10;
+			else
+			{
+				APP_LOG(APP_LOG_LEVEL_DEBUG, "ERROR: Unrecognised hex character \"%c\"", thisC);
+				return 0;
+			}
+			++c;
+		}
+		return result;  
+	}
+
+
+	void set_display_colors() {
+
+		char str_color1[7];
+		char str_color2[7];
+
+		if (strlen(basalt_colors) == 12) {
+			memcpy(str_color1, &basalt_colors[0], 6);
+			memcpy(str_color2, &basalt_colors[6], 6);
+			str_color1[6] = '\0';
+			str_color2[6] = '\0';
+		}
+		else
+			return;
+
+		int color1 = HexStringToUInt(str_color1);
+		int color2 = HexStringToUInt(str_color2);
+
+		bg_color = GColorFromHEX(color1);
+		fg_color = GColorFromHEX(color2);
+	}
+
+#else
+
+	void set_display_colors() { 
+		if (aplite_theme) {
+			bg_color = GColorWhite;
+			fg_color = GColorBlack;
+		} else {
+			bg_color = GColorBlack;
+			fg_color = GColorWhite;
+		}
+}
+	
+#endif
 
 void set_fonts() {
 	if (font_label.isCustom)
@@ -632,7 +770,7 @@ void set_fonts() {
 		case 1 :
 			font_label.font = fonts_get_system_font(FONT_KEY_GOTHIC_24);
 			font_label.isCustom = false;
-			text_label_rect.origin.y = 38;
+			text_label_rect.origin.y = 58;
 			text_label_rect.size.h = 40;
 			font_pin.font = fonts_get_system_font(FONT_KEY_BITHAM_34_MEDIUM_NUMBERS);
 			font_pin.isCustom = false;
@@ -640,7 +778,7 @@ void set_fonts() {
 		case 2 :
 			font_label.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DIGITAL_28));
 			font_label.isCustom = true;
-			text_label_rect.origin.y = 38;
+			text_label_rect.origin.y = 58;
 			text_label_rect.size.h = 40;
 			font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DIGITAL_38));
 			font_pin.isCustom = true;
@@ -648,7 +786,7 @@ void set_fonts() {
 		case 3 :
 			font_label.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BD_CARTOON_20));
 			font_label.isCustom = true;
-			text_label_rect.origin.y = 32;
+			text_label_rect.origin.y = 52;
 			text_label_rect.size.h = 22;
 			font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BD_CARTOON_28));
 			font_pin.isCustom = true;
@@ -657,7 +795,7 @@ void set_fonts() {
 			font_style = 0;
 			font_label.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ORBITRON_28));
 			font_label.isCustom = true;
-			text_label_rect.origin.y = 30;
+			text_label_rect.origin.y = 50;
 			text_label_rect.size.h = 40;
 			font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BITWISE_32));
 			font_pin.isCustom = true;
@@ -671,18 +809,24 @@ void set_fonts() {
 static void in_received_handler(DictionaryIterator *iter, void *context) {
 	// Check for fields you expect to receive
 	if (DEBUG)
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Message Recieved");
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Message Received");
 	
 	resetIdleTime();
 	Tuple *key_count_tuple = dict_find(iter, JS_KEY_COUNT);
 	Tuple *key_tuple = dict_find(iter, JS_TRANSMIT_KEY);
 	Tuple *key_delete_tuple = dict_find(iter, JS_DELETE_KEY);
 	Tuple *timezone_tuple = dict_find(iter, JS_TIMEZONE);
-	Tuple *theme_tuple = dict_find(iter, JS_THEME);
 	Tuple *font_style_tuple = dict_find(iter, JS_FONT_STYLE);
 	Tuple *delete_all_tuple = dict_find(iter, JS_DELETE_ALL);
 	Tuple *idle_timeout_tuple = dict_find(iter, JS_IDLE_TIMEOUT);
 	Tuple *key_request_tuple = dict_find(iter, JS_REQUEST_KEY);
+	Tuple *watch_version_request_tuple = dict_find(iter, JS_WATCH_VERSION_REQUEST);
+	
+	#ifdef PBL_COLOR
+		Tuple *basalt_colors_tuple = dict_find(iter, JS_BASALT_COLORS);
+	#else
+		Tuple *aplite_theme_tuple = dict_find(iter, JS_THEME);
+	#endif
 	
 	// Act on the found fields received
 	if (delete_all_tuple) {
@@ -713,7 +857,6 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: REQUESTING CODES");
 			loading_complete = false;
 			requesting_code = 1;
-			request_key(requesting_code++);
 		}
 	} // key_count_tuple
 	
@@ -723,6 +866,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		if (DEBUG)
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Text: %s", key_value);
 		expand_key(key_value, true);
+		check_load_status();
 	} // key_tuple
 	
 	if (key_delete_tuple) {
@@ -773,17 +917,40 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		if (DEBUG)
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Timezone Offset: %d", timezone_offset);
 	} // timezone_tuple
+
+	#ifdef PBL_COLOR
+		
+		if (basalt_colors_tuple) {
+			char basalt_colors_value[13];
+			memcpy(basalt_colors_value, basalt_colors_tuple->value->cstring, basalt_colors_tuple->length);
+		
+			if (strcmp(basalt_colors, basalt_colors_value) != 0) {
+				memcpy(basalt_colors, basalt_colors_value, 13);
+				if (DEBUG)
+					APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: basalt_colors: %s", basalt_colors);
+				persist_write_string(PS_BASALT_COLORS, basalt_colors);
+				set_display_colors();
+				animation_state = 50;
+				animation_control();
+			}		
+		} // basalt_colors_tuple
 	
-	if (theme_tuple) {
-		unsigned int theme_value = theme_tuple->value->int16;
-		if (theme != theme_value) {
-			theme = theme_value;
-			persist_write_int(PS_THEME, theme);
-			set_theme();
-			if (DEBUG)
-				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Theme: %d", theme);
-		}
-	} // theme_tuple
+	#else
+
+		if (aplite_theme_tuple) {
+			unsigned int aplite_theme_value = aplite_theme_tuple->value->int16;
+			if (aplite_theme != aplite_theme_value) {
+				aplite_theme = aplite_theme_value;
+				persist_write_int(PS_APLITE_THEME, aplite_theme);
+				set_display_colors();
+				animation_state = 50;
+				animation_control();
+				if (DEBUG)
+					APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Theme: %d", aplite_theme);
+			}
+		} // aplite_theme_tuple
+	
+	#endif
 	
 	if (font_style_tuple) {
 		unsigned int font_style_value = font_style_tuple->value->int16;
@@ -797,21 +964,32 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 	} // font_style_tuple
 	
 	if (idle_timeout_tuple) {
-		unsigned int idle_timeout_value = idle_timeout_tuple->value->int16;
-		if (idle_timeout != idle_timeout_value) {
-			idle_timeout = idle_timeout_value;
-			persist_write_int(PS_IDLE_TIMEOUT, idle_timeout);
-			resetIdleTime();
-			
-			if (DEBUG)
-				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Idle Timeout: %d", idle_timeout);
-		}
+		if (idle_timeout_tuple->value->int16 >= 0) {
+			unsigned int idle_timeout_value = idle_timeout_tuple->value->int16;
+			if (idle_timeout != idle_timeout_value) {
+				idle_timeout = idle_timeout_value;
+				persist_write_int(PS_IDLE_TIMEOUT, idle_timeout);
+			}
+		}	
+		else
+			idle_timeout = 0;
+		
+		resetIdleTime();
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Idle Timeout: %d", idle_timeout);
 	} // idle_timeout_tuple
 	
 	if (key_request_tuple) {
 		int requested_key_value = key_request_tuple->value->int16;
 		send_key(requested_key_value);
 	} // key_request_tuple
+	
+	if (watch_version_request_tuple) {
+		int watch_version = watch_info_get_model();
+		sendJSMessage(TupletInteger(JS_WATCH_VERSION_REQUEST, watch_version));
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Sent watch version: %d", watch_version);
+	}
 }
 
 void in_dropped_handler(AppMessageResult reason, void *context) {
@@ -822,11 +1000,20 @@ void in_dropped_handler(AppMessageResult reason, void *context) {
 
 void load_persistent_data() {	
 	timezone_offset = persist_exists(PS_TIMEZONE_KEY) ? persist_read_int(PS_TIMEZONE_KEY) : 0;
-	theme = persist_exists(PS_THEME) ? persist_read_int(PS_THEME) : 0;
+	
+	#ifdef PBL_COLOR
+		if (persist_exists(PS_BASALT_COLORS))
+			persist_read_string(PS_BASALT_COLORS, basalt_colors, 13);
+		else
+			memcpy(basalt_colors, "00AAFFFFFFFF"+'\0', 13);
+	#else
+		aplite_theme = persist_exists(PS_APLITE_THEME) ? persist_read_int(PS_APLITE_THEME) : 0;
+	#endif
+		
 	otp_default = persist_exists(PS_DEFAULT_KEY) ? persist_read_int(PS_DEFAULT_KEY) : 0;
 	font_style = persist_exists(PS_FONT_STYLE) ? persist_read_int(PS_FONT_STYLE) : 0;
 	idle_timeout = persist_exists(PS_IDLE_TIMEOUT) ? persist_read_int(PS_IDLE_TIMEOUT) : 300;
-	
+		
 	if (persist_exists(PS_SECRET)) {
 		for(int i = 0; i < MAX_OTP; i++) {
 			if (persist_exists(PS_SECRET+i)) {
@@ -859,21 +1046,22 @@ static void window_load(Window *window) {
 	Layer *window_layer = window_get_root_layer(main_window);
 	display_bounds = layer_get_frame(window_layer);
 	
-	countdown_layer = text_layer_create(GRect(0, display_bounds.size.h-10, 0, 10));
+	countdown_rect = (GRect(0, display_bounds.size.h-10, display_bounds.size.w, 10));
+	GRect countdown_start = countdown_rect;
+	countdown_start.size.w = 0;
+	countdown_layer = text_layer_create(countdown_start);
 	layer_add_child(window_layer, text_layer_get_layer(countdown_layer));
 	
-	text_label_rect = GRect(0, 30, display_bounds.size.w, 40);
-	GRect text_label_start_rect  = text_label_rect;
-	text_label_layer = text_layer_create(text_label_start_rect);
+	text_label_rect = GRect(0, 50, display_bounds.size.w, 40);
+	text_label_layer = text_layer_create(text_label_rect);
 	text_layer_set_background_color(text_label_layer, GColorClear);
 	text_layer_set_text_alignment(text_label_layer, GTextAlignmentLeft);
 	text_layer_set_overflow_mode(text_label_layer, GTextOverflowModeWordWrap);
 	text_layer_set_text(text_label_layer, label_text);
 	layer_add_child(window_layer, text_layer_get_layer(text_label_layer));
 	
-	text_pin_rect = GRect(0, 60, display_bounds.size.w, 40);
-	GRect text_pin_start_rect = text_pin_rect;
-	text_pin_layer = text_layer_create(text_pin_start_rect);
+	text_pin_rect = GRect(0, 80, display_bounds.size.w, 40);
+	text_pin_layer = text_layer_create(text_pin_rect);
 	text_layer_set_background_color(text_pin_layer, GColorClear);
 	text_layer_set_text_alignment(text_pin_layer, GTextAlignmentCenter);
 	text_layer_set_text(text_pin_layer, pin_text);
@@ -881,10 +1069,11 @@ static void window_load(Window *window) {
 	
 	tick_timer_service_subscribe(SECOND_UNIT, &handle_second_tick);
 	
-	set_theme();
+	set_display_colors();
+	apply_display_colors();
 	set_fonts();
 	loading_complete = true;
-	finish_refreshing();
+	animation_control();
 }
 
 void window_unload(Window *window) {
@@ -903,16 +1092,15 @@ void handle_init(void) {
 		.unload = window_unload,
 	});
 	
-	window_stack_push(main_window, true /* Animated */);
+	window_set_fullscreen(main_window, true);
+	window_stack_push(main_window, false /* Animated */);
 	
 	app_message_register_inbox_received(in_received_handler);
 	app_message_register_inbox_dropped(in_dropped_handler);
 	app_message_register_outbox_sent(out_sent_handler);
 	app_message_register_outbox_failed(out_failed_handler);
-	
-	const uint32_t inbound_size = 256;
-	const uint32_t outbound_size = 256;
-	app_message_open(inbound_size, outbound_size);
+
+	app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());    //Largest possible input and output buffer size
 }
 
 void handle_deinit(void) {

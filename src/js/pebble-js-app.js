@@ -1,17 +1,20 @@
 var MAX_OTP = 16;
 var MAX_LABEL_LENGTH = 20;
 var MAX_KEY_LENGTH = 64;
+var MAX_MESSAGE_RETRIES = 5;
 
 var otp_count = 0;
-var theme = 0;
-var font_style = 0;
-var timezoneOffset = 0;
+var aplite_theme = -1;
+var basalt_colors = -1;
+var font_style = -1;
+var timezone_offset = 0;
 var idle_timeout = 0;
+var app_version = 20;
+var watch_version = 0;
+var config_requested = false;
 var message_send_retries = 0;
-var message_send_max_retries = 5;
-var app_version = 7;
-
-var debug = false;
+var msg_data;
+var debug = true;
 
 function checkKeyStringIsValid(key) {
 	if (debug)
@@ -40,6 +43,7 @@ function checkKeyStringIsValid(key) {
 }
 
 function loadLocalVariables() {
+	otp_count = 0;
 	for (var i=0; i<MAX_OTP; i++)
 	{
 		var tempKey = getItem("secret_pair"+i);
@@ -48,13 +52,15 @@ function loadLocalVariables() {
 		else
 			break;
 	}
-	
-	theme = parseInt(getItem("theme"));
+
+	aplite_theme = parseInt(getItem("theme"));
+	basalt_colors = getItem("basalt_colors");
 	font_style = parseInt(getItem("font_style"));
 	idle_timeout = getItem("idle_timeout");
-	timezoneOffset = new Date().getTimezoneOffset();
+	timezone_offset = new Date().getTimezoneOffset();
 	
-	theme = !theme ? 0 : theme;
+	aplite_theme = !aplite_theme ? 0 : aplite_theme;
+	basalt_colors = !basalt_colors ? "00AAFFFFFFFF" : basalt_colors;
 	font_style = !font_style ? 0 : font_style;
 	idle_timeout = idle_timeout === null ? 300 : parseInt(idle_timeout);
 }
@@ -76,6 +82,7 @@ function setItem(reference, item) {
 }
 
 function sendAppMessage(data) {
+	msg_data = data;
 	Pebble.sendAppMessage(data,
 						function(e) { // SUCCESS
 							if (debug)
@@ -83,16 +90,10 @@ function sendAppMessage(data) {
 							message_send_retries = 0;
 						}, function(e) { // FAILURE
 							if (debug)
-								console.log("ERROR: Unable to deliver message with transactionId=" + e.data.transactionId + " Error is: " + e.error.message);
-							if (message_send_retries <= message_send_max_retries) {
+								console.log("ERROR: Unable to deliver message with transactionId=" + e.data.transactionId);// + " Error is: " + e.error.message);
+							if (message_send_retries <= MAX_MESSAGE_RETRIES) {
 								message_send_retries++;
-								if (debug)
-									console.log("INFO: Retry: " + message_send_retries);
-								sendAppMessage(data);
-							} else {
-								if (debug)
-									console.log("ERROR: All retries failed");
-								message_send_retries = 0;
+								sendAppMessage(msg_data);
 							}
 						});
 }
@@ -108,20 +109,30 @@ Pebble.addEventListener("ready",
 								// Send timezone, keycount, and theme to watch
 								sendAppMessage({
 									"key_count":otp_count, 
-									"theme":theme, 
-									"timezone":timezoneOffset,
+									"theme":aplite_theme,
+									"basalt_colors":basalt_colors,
+									"timezone":timezone_offset,
 									"font_style":font_style,
-									"idle_timeout":idle_timeout
+									"idle_timeout":idle_timeout,
+									"watch_version_request":0
 									});
 
 								if (debug) {
 									console.log("INFO: otp_count="+otp_count);
-									console.log("INFO: theme="+theme);
-									console.log("INFO: timezoneOffset="+timezoneOffset);
+									console.log("INFO: theme="+aplite_theme);
+									console.log("INFO: basalt_colors="+basalt_colors);
+									console.log("INFO: timezoneOffset="+timezone_offset);
 									console.log("INFO: font_style="+font_style);
 									console.log("INFO: idle_timeout="+idle_timeout);
 								}
-
+								
+								//console.log("HERE1");
+								//for(var propertyName in Pebble) {
+								//	console.log(propertyName);
+								//}
+								//console.log("HERE2");
+								//console.log(Pebble.getExtensions());
+								//console.log("HERE3");
 								/*// ####### CLEAN APP ##############
 								for (var i=0; i<MAX_OTP; i++)
 								{
@@ -165,41 +176,64 @@ Pebble.addEventListener("appmessage",
 								if (e.payload.request_key) {
 									if (debug)
 										console.log("INFO: Requested key: "+e.payload.request_key);
-									sendKeyToWatch(getItem("secret_pair"+(e.payload.request_key-1)));
+									var requested_key = getItem("secret_pair"+(e.payload.request_key-1));
+									if (checkKeyStringIsValid(requested_key))
+										sendKeyToWatch(requested_key);
+									else
+										sendKeyToWatch("NULL"+e.payload.request_key);
 								}
 								else if (e.payload.delete_key) {
 									if (debug)
 										console.log("INFO: Deleting key: "+e.payload.delete_key);
 									confirmDelete(e.payload.delete_key);
 								}
+								else if (e.payload.watch_version_request) {
+									watch_version = e.payload.watch_version_request;
+									if (debug)
+										console.log("INFO: Received watch version: "+watch_version);
+									if (config_requested) {
+										config_requested = false;
+										openConfigurationPage();
+									}
+								}
 								else {
 									if (debug)
-										console.log(e.payload);
+										console.log("INFO: Unknown payload:"+e.payload);
 								}
 							});
 
 Pebble.addEventListener('showConfiguration', function(e) {
-	// Disable timeout while in configuration menu
-	sendAppMessage({"idle_timeout":0});
+	sendAppMessage({"idle_timeout":-1});
 	
-	var url = 'http://oncloudvirtual.com/pebble/pebbleauth/v'+
+	if (watch_version === 0) {
+		config_requested = true;
+		return false;
+	}
+	
+	openConfigurationPage();
+});
+
+function openConfigurationPage() {
+		var url = 'http://oncloudvirtual.com/pebble/pebbleauth/v'+
 		app_version+'/'+
 		'?otp_count='+otp_count+
-		'&theme='+theme+
+		'&theme='+aplite_theme+
+		'&basalt_colors='+basalt_colors+
 		'&font_style='+font_style+
-		'&idle_timeout='+idle_timeout;
-	
+		'&idle_timeout='+idle_timeout+
+		'&watch_version='+watch_version;
+
 	if (debug)
 		console.log("INFO: "+url);
 	Pebble.openURL(url);
-});
+}
 
 Pebble.addEventListener("webviewclosed",
 							function(e) {
-								var configuration = JSON.parse(e.response);
+								var configuration = JSON.parse(decodeURIComponent(e.response));
 								var config ={};
 								var i = 0;
-								
+
 								if(!isNaN(configuration.delete_all)) {
 									if (debug)
 										console.log("INFO: Delete all requested");
@@ -213,13 +247,22 @@ Pebble.addEventListener("webviewclosed",
 									return;
 								}
 								
-								if(!isNaN(configuration.theme) && configuration.theme != theme) {
+								if(!isNaN(configuration.theme) && configuration.theme != aplite_theme) {
 									if (debug)
 										console.log("INFO: Theme changed");
 									
-									theme = configuration.theme;
-									setItem("theme",theme);
-									config.theme = theme;
+									aplite_theme = configuration.theme;
+									setItem("theme",aplite_theme);
+									config.theme = aplite_theme;
+								}
+								
+								if(configuration.basalt_colors && configuration.basalt_colors.length == 12 && configuration.basalt_colors.localeCompare(basalt_colors) !== 0) {
+									if (debug)
+										console.log("INFO: Colors changed");
+									
+									basalt_colors = configuration.basalt_colors;
+									setItem("basalt_colors", basalt_colors);
+									config.basalt_colors = basalt_colors;
 								}
 								
 								if(!isNaN(configuration.font_style) && configuration.font_style != font_style) {
