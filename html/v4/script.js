@@ -1,57 +1,4 @@
-<!DOCTYPE html>
-<html>
-        <head>
-                <title>PebbleAuth</title>
-                <meta charset='utf-8'>
-                <meta name='viewport' content='width=device-width, initial-scale=1'>
-                <link rel='stylesheet' href='http://code.jquery.com/mobile/1.3.2/jquery.mobile-1.3.2.min.css' />
-                <script src='http://code.jquery.com/jquery-1.9.1.min.js'></script>
-                <script src='http://code.jquery.com/mobile/1.3.2/jquery.mobile-1.3.2.min.js'></script>
-                <style>
-                        .ui-header .ui-title { margin-left: 1em; margin-right: 1em; text-overflow: clip; }
-                </style>
-        </head>
-  <body>
-<div data-role="page" id="page1">
-    <div data-theme="a" data-role="header" data-position="fixed">
-        <h1>
-            PebbleAuth Configuration
-        </h1>
-    </div>
-    <div id="settings" data-role="content">
-		<div data-role="fieldcontain"><label for="keyname">Name</label>
-			<input name="keyname" id="keyname" placeholder="" value="" maxlength=6 data-mini="true" type="text">
-		</div>
-		<div data-role="fieldcontain"><label for="keysecret">Secret</label>
-			<input name="keysecret" id="keysecret" placeholder="" value="" data-mini="true" type="text">
-		</div>
 	
-		<div id="theme" data-role="fieldcontain">			
-			<fieldset data-role="controlgroup" data-type="horizontal" data-mini="true">
-				<legend>Theme</legend>
-				<input id="format1" name="theme" value="0" data-theme="" type="radio" checked>
-				<label for="format1">Dark</label>
-				<input id="format2" name="theme" value="1" data-theme="" type="radio">
-				<label for="format2">Light</label>
-			</fieldset>
-		</div>
-		
-		<div class="ui-grid-a">
-			<div class="ui-block-a">
-				<input id="cancel" type="submit" data-theme="c" data-icon="delete" data-iconpos="left" value="Cancel">
-			</div>
-			<div class="ui-block-b">
-				<input id="save" type="submit" data-theme="b" data-icon="check" data-iconpos="right" value="Save">
-			</div>
-		</div>
-	</div>
-    <div id="footer" data-theme="c" data-role="footer" data-position="fixed">
-        <h3>
-            You have NUM_SPACES spaces remaining
-        </h3>
-    </div>
-</div>
-    <script>
 		function queryObj() {
 			var result = {}, keyValuePairs = location.search.slice(1).split('&');
 
@@ -156,30 +103,17 @@
 			var options = {};
 			
 			options.theme = parseInt($("input[name=theme]:checked").val(), 10);
+			options.font_style = parseInt($("input[name=font_style]:checked").val(), 10);
 			
 			if ($("#keysecret").val()) {
-				options.label =  $("#keyname").val().substring(0,6);
+				options.label =  $("#keyname").val();
 				options.secret = $("#keysecret").val().replace(/\s/g, '');
 			}
 
 			return options;
 		}
 
-		$().ready(function() {
-			var app_version = queryObj()["version"];
-			var otp_count = queryObj()["otp_count"];
-			var slots_remaining = 0;
-			
-			app_version = isNumber(app_version) ? app_version : 0;
-			otp_count = isNumber(otp_count) ? otp_count : 0;
-			slots_remaining = app_version >= 2 ? 16 - otp_count : 8 - otp_count;
-			
-			if (slots_remaining === 0) {
-				document.getElementById("keyname").disabled=true;
-				document.getElementById("keysecret").disabled=true;
-			}
-			document.getElementById("footer").innerHTML=document.getElementById("footer").innerHTML.replace("NUM_SPACES", slots_remaining);
-			
+		$("document").ready(function() {
 			$("#cancel").click(function() {
 			  console.log("Cancel");
 			  document.location = "pebblejs://close";
@@ -198,12 +132,29 @@
 				}
 				else {
 					var location = "pebblejs://close#" + encodeURIComponent(JSON.stringify(options));
-					console.log("Warping to: " + location);
+					console.log("Warping to:");
 					console.log(location);
 					document.location = location;
 				}
 			});
+
+			var otp_count = queryObj()["otp_count"];
+			var slots_remaining = 0;
+			var theme = queryObj()["theme"];
+			var font_style = queryObj()["font_style"];
+			
+			theme = parseInt(isNumber(theme) && theme <= 1 ? theme : 0);
+			font_style = parseInt(isNumber(font_style) && font_style <= 3 ? font_style : 0);
+			
+			$('#theme_'+theme).prop( "checked", true ).checkboxradio( "refresh" );
+			$('#font_style_'+font_style).prop( "checked", true ).checkboxradio( "refresh" );
+
+			otp_count = parseInt(isNumber(otp_count) ? otp_count : 0);
+			slots_remaining = 16 - otp_count;
+			
+			if (slots_remaining === 0) {
+				document.getElementById("keyname").disabled=true;
+				document.getElementById("keysecret").disabled=true;
+			}
+			document.getElementById("footer").innerHTML=document.getElementById("footer").innerHTML.replace("NUM_SPACES", slots_remaining);
 		});
-    </script>
-  </body>
-</html>

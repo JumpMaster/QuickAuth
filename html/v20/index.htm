@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>PebbleAuth</title>
+		<meta charset='utf-8'>
+		<meta name='viewport' content='width=device-width, initial-scale=1'>
+		<link rel='stylesheet' href='/jquery/mobile/1.4.5/jquery.mobile-1.4.5.min.css' />
+		<script src='/jquery/jquery-1.11.0.min.js'></script>
+		<script src='/jquery/mobile/1.4.5/jquery.mobile-1.4.5.min.js'></script>
+		<script src='script.js'></script>
+		<style>
+			.ui-header .ui-title 
+			{ 
+				margin-left: 1em;
+				margin-right: 1em;
+				text-overflow: clip;
+			}
+			.color-box
+			{
+				width: 12vw;
+				height: 12vw;
+				border-style: none;
+				margin: 1.5vw;
+				display:inline-block;
+			}
+			.selected-color-box
+			{
+				border-width: 1.5vw;
+				border-style: solid;
+				border-color: black;
+				margin: 0px;
+			}
+			.color-row
+			{
+				border-style: none;
+				border-width: 0px;
+			}
+			.hidden
+			{
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		<div data-role="page" id="page1">
+			<div data-role="header" data-theme="b" id="header" data-position="fixed">
+				<h1>PebbleAuth 2.0</h1>
+				<a href="#app_help" data-rel="popup" data-transition="fade" data-position-to="window"  data-icon="info" class="ui-btn-right">Help</a>
+			</div>
+			<div id="settings" data-role="content">
+
+				<div data-role="fieldcontain"><label for="keyname">Name</label>
+					<input name="keyname" id="keyname" placeholder="" value="" maxlength=20 data-mini="true" type="text">
+				</div>
+				
+				<div data-role="fieldcontain"><label for="keysecret">Key</label>
+					<input name="keysecret" id="keysecret" placeholder="" value="" data-mini="true" type="text">
+				</div>
+				
+				<div id="theme" data-role="fieldcontain" class="hidden">
+					<fieldset data-role="controlgroup" data-type="horizontal">
+						<legend>Global Theme</legend>
+						<input id="theme_0" name="theme" value="0" type="radio">
+						<label for="theme_0">Dark</label>
+						<input id="theme_1" name="theme" value="1" type="radio">
+						<label for="theme_1">Light</label>
+					</fieldset>
+				</div>
+
+				<div id="time-foreground" data-role="fieldcontain" class="hidden">
+					<label for="foreground-color">Foreground Color</label>
+					<a href="#color-picker" data-rel="popup" class="ui-btn ui-corner-all" data-position-to="window" id="foreground-color" style="height: 5vw; background-color: #FFFFFF"></a>
+				</div>
+				
+				<div id="time-background" data-role="fieldcontain" class="hidden">
+					<label for="background-color">Background Color</label>
+					<a href="#color-picker" data-rel="popup" class="ui-btn ui-corner-all" data-position-to="window" id="background-color" style="height: 5vw; background-color: #00AAFF;"></a>
+				</div>
+				
+				<div class="ui-field-contain">
+					<label for="select-native-1">Idle Timeout</label>
+					<select name="idle_timeout" id="idle_timeout">
+						<option value="0">Disabled</option>
+						<option value="60">1 Minute</option>
+						<option value="120">2 Minutes</option>
+						<option value="300">5 Minutes</option>
+						<option value="600">10 Minutes</option>
+					</select>
+				</div>
+
+				<div class="ui-grid-a">
+					<div class="ui-block-a">
+						<div data-role="fieldcontain">
+							<fieldset data-role="controlgroup">
+							<legend>Global Font Style</legend>
+								<input type="radio" name="font_style" id="font_style_0" value="0">
+								<label for="font_style_0" style="border-top-right-radius:0px">Style 1</label>
+								<input type="radio" name="font_style" id="font_style_1" value="1">
+								<label for="font_style_1">Style 2</label>
+								<input type="radio" name="font_style" id="font_style_2" value="2">
+								<label for="font_style_2">Style 3</label>
+								<input type="radio" name="font_style" id="font_style_3" value="3">
+								<label for="font_style_3" style="border-bottom-right-radius:0px">Style 4</label>
+							</fieldset>
+						</div>
+					</div>
+					<div class="ui-block-b">
+						<div data-role="fieldcontain">
+							<fieldset data-role="controlgroup">
+							<legend style="visibility:hidden">HIDDEN</legend>
+								<a id="font_preview_1" href="#font_preview_image_1" data-rel="popup" data-transition="flip" data-position-to="window" style="border-top-left-radius:0px" data-role="button">Preview</a>
+								<a id="font_preview_2" href="#font_preview_image_2" data-rel="popup" data-transition="flip" data-position-to="window" data-role="button">Preview</a>
+								<a id="font_preview_3" href="#font_preview_image_3" data-rel="popup" data-transition="flip" data-position-to="window" data-role="button">Preview</a>
+								<a id="font_preview_4" href="#font_preview_image_4" data-rel="popup" data-transition="flip" data-position-to="window" style="border-bottom-left-radius:0px" data-role="button">Preview</a>
+							</fieldset>
+						</div>
+					</div>
+				</div>
+				<div class="ui-grid-a">
+					<div class="ui-block-a">
+						<input id="cancel" type="submit" data-theme="a" data-icon="delete" data-iconpos="left" value="Cancel">
+					</div>
+					<div class="ui-block-b">
+						<input id="save" type="submit" data-theme="b" data-icon="check" data-iconpos="right" value="Save">
+					</div>
+				</div>
+				<a id="delete_all_button" data-theme="b" style="background:red;" href="#delete_all" data-rel="popup" data-transition="fade" data-position-to="window" style="border-top-left-radius:0px" data-role="button">DELETE ALL</a>
+			</div>
+			<div id="footer" data-theme="b" data-role="footer" data-position="fixed">
+				<h3>
+					You have NUM_SPACES spaces remaining
+				</h3>
+			</div>
+			
+			<!-- POPUPS -->
+			<div data-role="popup" id="app_help" data-overlay-theme="b">
+				<a href="#" data-rel="back" data-role="button" data-theme="b" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+				<h3>Welcome to PebbleAuth!</h3>
+				<p>This application allows you to get your one time code codes straight from your Pebble Smartwatch.</p>
+				<p>Many websites support two-factor authentication to enhance your security including Facebook, Dropbox, AWS, and all of Google's services.</p>
+				<p>If you don't already have Google Authenticator installed on your smartphone I would recommend you install it as a backup.  To get your codes using PebbleAuth simply go through the setup process on the website such as Facebook.  You will either get a QR code to scan or be given a key which is a random 14-64 character long string.  Scan the barcode or enter the key into your Google Authenticator app.  If you were given a key you can enter this straight into the configuration page here.  If you were given a QR code there'll usually be a link to get a key for "other devices".  Enter this key into the the configuration page and you're good to go!</p>
+				<p>The font styles and theme are global and can be changed without entering a new key.  The Name field can be up to 20 characters long although only Style 2 supports showing that many characters.</p>
+				<p>Happy Two-Factoring!</p>
+			</div>
+			<div data-role="popup" id="font_preview_image_1" style="border:0px" class="photopopup" data-overlay-theme="b" data-corners="false">
+				<img src="assets/font_style_1.png" alt="Font 1">
+			</div>
+			<div data-role="popup" id="font_preview_image_2" style="border:0px" class="photopopup" data-overlay-theme="b" data-corners="false">
+				<img src="assets/font_style_2.png" alt="Font 2">
+			</div>
+			<div data-role="popup" id="font_preview_image_3" style="border:0px" class="photopopup" data-overlay-theme="b" data-corners="false">
+				<img src="assets/font_style_3.png" alt="Font 3">
+			</div>
+			<div data-role="popup" id="font_preview_image_4" style="border:0px" class="photopopup" data-overlay-theme="b" data-corners="false">
+				<img src="assets/font_style_4.png" alt="Font 4">
+			</div>
+			
+			<div data-role="popup" id="color-picker" data-overlay-theme="b">
+				<a href="#" data-rel="back" data-role="button" data-theme="b" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+				<div data-role="main" id="color-picker" class="ui-content" style="border-style: none; height:90vh; overflow-y:scroll; overflow-x:hidden;">
+					<div class="color-row" id="color-row1">
+						<div class="color-box" id="color-box-000000" style="background:#000000;"></div>
+						<div class="color-box" id="color-box-555555" style="background:#555555;"></div>
+						<div class="color-box" id="color-box-AAAAAA" style="background:#AAAAAA;"></div>
+						<div class="color-box" id="color-box-FFFFFF" style="background:#FFFFFF;"></div>
+						<div class="color-box" id="color-box-550000" style="background:#550000;"></div>
+					</div>
+					<div class="color-row" id="color-row2">
+						<div class="color-box" id="color-box-FFAAAA" style="background:#FFAAAA;"></div>
+						<div class="color-box" id="color-box-FF5555" style="background:#FF5555;"></div>
+						<div class="color-box" id="color-box-FF0000" style="background:#FF0000;"></div>
+						<div class="color-box" id="color-box-AA5555" style="background:#AA5555;"></div>
+						<div class="color-box" id="color-box-AA0000" style="background:#AA0000;"></div>
+					</div>
+					<div class="color-row" id="color-row3">
+						<div class="color-box" id="color-box-FF55AA" style="background:#FF55AA;"></div>
+						<div class="color-box" id="color-box-FF00AA" style="background:#FF00AA;"></div>
+						<div class="color-box" id="color-box-FF0055" style="background:#FF0055;"></div>
+						<div class="color-box" id="color-box-AA0055" style="background:#AA0055;"></div>
+						<div class="color-box" id="color-box-550055" style="background:#550055;"></div>
+					</div>
+					<div class="color-row" id="color-row4">
+						<div class="color-box" id="color-box-FFAAFF" style="background:#FFAAFF;"></div>
+						<div class="color-box" id="color-box-FF55FF" style="background:#FF55FF;"></div>
+						<div class="color-box" id="color-box-FF00FF" style="background:#FF00FF;"></div>
+						<div class="color-box" id="color-box-AA00AA" style="background:#AA00AA;"></div>
+						<div class="color-box" id="color-box-AA55AA" style="background:#AA55AA;"></div>
+					</div>
+					<div class="color-row" id="color-row5">
+						<div class="color-box" id="color-box-AAAAFF" style="background:#AAAAFF;"></div>
+						<div class="color-box" id="color-box-AA55FF" style="background:#AA55FF;"></div>
+						<div class="color-box" id="color-box-AA00FF" style="background:#AA00FF;"></div>
+						<div class="color-box" id="color-box-5555AA" style="background:#5555AA;"></div>
+						<div class="color-box" id="color-box-5500AA" style="background:#5500AA;"></div>
+					</div>
+					<div class="color-row" id="color-row6">
+						<div class="color-box" id="color-box-0000FF" style="background:#0000FF;"></div>
+						<div class="color-box" id="color-box-0000AA" style="background:#0000AA;"></div>
+						<div class="color-box" id="color-box-000055" style="background:#000055;"></div>
+						<div class="color-box" id="color-box-5555FF" style="background:#5555FF;"></div>
+						<div class="color-box" id="color-box-5500FF" style="background:#5500FF;"></div>
+					</div>
+					<div class="color-row" id="color-row7">
+						<div class="color-box" id="color-box-0055FF" style="background:#0055FF;"></div>
+						<div class="color-box" id="color-box-0055AA" style="background:#0055AA;"></div>
+						<div class="color-box" id="color-box-00AAFF" style="background:#00AAFF;"></div>
+						<div class="color-box" id="color-box-55AAFF" style="background:#55AAFF;"></div>
+						<div class="color-box" id="color-box-00AAAA" style="background:#00AAAA;"></div>
+					</div>
+					<div class="color-row" id="color-row8">
+						<div class="color-box" id="color-box-AAFFAA" style="background:#AAFFAA;"></div>
+						<div class="color-box" id="color-box-AAFFFF" style="background:#AAFFFF;"></div>
+						<div class="color-box" id="color-box-55FFFF" style="background:#55FFFF;"></div>
+						<div class="color-box" id="color-box-00FFFF" style="background:#00FFFF;"></div>
+						<div class="color-box" id="color-box-55AAAA" style="background:#55AAAA;"></div>
+					</div>
+					<div class="color-row" id="color-row9">
+						<div class="color-box" id="color-box-00FFAA" style="background:#00FFAA;"></div>
+						<div class="color-box" id="color-box-55FFAA" style="background:#55FFAA;"></div>
+						<div class="color-box" id="color-box-00FF55" style="background:#00FF55;"></div>
+						<div class="color-box" id="color-box-005555" style="background:#005555;"></div>
+						<div class="color-box" id="color-box-005500" style="background:#005500;"></div>
+					</div>
+					<div class="color-row" id="color-row10">
+						<div class="color-box" id="color-box-55FF00" style="background:#55FF00;"></div>
+						<div class="color-box" id="color-box-55FF55" style="background:#55FF55;"></div>
+						<div class="color-box" id="color-box-AAFF55" style="background:#AAFF55;"></div>
+						<div class="color-box" id="color-box-AAFF00" style="background:#AAFF00;"></div>
+						<div class="color-box" id="color-box-555500" style="background:#555500;"></div>
+					</div>
+					<div class="color-row" id="color-row11">
+						<div class="color-box" id="color-box-00FF00" style="background:#00FF00;"></div>
+						<div class="color-box" id="color-box-55AA55" style="background:#55AA55;"></div>
+						<div class="color-box" id="color-box-00AA55" style="background:#00AA55;"></div>
+						<div class="color-box" id="color-box-00AA00" style="background:#00AA00;"></div>
+						<div class="color-box" id="color-box-55AA00" style="background:#55AA00;"></div>
+					</div>
+					<div class="color-row" id="color-row12">
+						<div class="color-box" id="color-box-FFFFAA" style="background:#FFFFAA;"></div>
+						<div class="color-box" id="color-box-FFFF55" style="background:#FFFF55;"></div>
+						<div class="color-box" id="color-box-FFFF00" style="background:#FFFF00;"></div>
+						<div class="color-box" id="color-box-AAAA55" style="background:#AAAA55;"></div>
+						<div class="color-box" id="color-box-AAAA00" style="background:#AAAA00;"></div>
+					</div>
+					<div class="color-row" id="color-row13">
+						<div class="color-box" id="color-box-FFAA55" style="background:#FFAA55;"></div>
+						<div class="color-box" id="color-box-FFAA00" style="background:#FFAA00;"></div>
+						<div class="color-box" id="color-box-FF5500" style="background:#FF5500;"></div>
+						<div class="color-box" id="color-box-AA5500" style="background:#AA5500;"></div>
+					</div>
+				</div>
+			</div>
+			
+			<div data-role="popup" id="delete_all" style="min-width:300px" data-overlay-theme="b">
+				<h3>ARE YOU SURE?</h3>
+				<p>This cannot be undone!</p>
+				<div class="ui-grid-a">
+					<div class="ui-block-a">
+						<a href="#" data-rel="back" data-icon="delete" data-role="button">Cancel</a>
+					</div>
+					<div class="ui-block-b">
+						<input id="confirm_delete_all" type="submit" data-theme="b" data-icon="check" data-iconpos="right" value="Delete All">
+					</div>
+				</div>
+			</div>
+			<!-- /POPUPS -->
+			
+		</div>
+	</body>
+	<script>
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+		ga('create', 'UA-50152651-1', 'oncouldvirtual.com');
+		ga('send', 'pageview');
+	</script>
+</html>

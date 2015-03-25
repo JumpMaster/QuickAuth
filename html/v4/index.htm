@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>PebbleAuth</title>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1'>
+	<link rel='stylesheet' href='/jquery/mobile/1.4.2/jquery.mobile-1.4.2.min.css' />
+	<script src='/jquery/jquery-1.11.0.min.js'></script>
+	<script src='/jquery/mobile/1.4.2/jquery.mobile-1.4.2.min.js'></script>
+	<script src='script.js'></script>
+	<style>
+		.ui-header .ui-title { margin-left: 1em; margin-right: 1em; text-overflow: clip; }
+	</style>
+</head>
+<body>
+	<div data-role="page" id="page1">
+		<div data-role="header" data-theme="b" id="header" data-position="fixed">
+			<h1>PebbleAuth 1.2 Configuration</h1>
+			<a href="#app_help" data-rel="popup" data-transition="fade" data-position-to="window"  data-icon="info" class="ui-btn-right">Help</a>
+		</div>
+		<div id="settings" data-role="content">
+		
+			<a id="out_of_date_button" data-theme="b" style="background:red;" href="#out_of_date" data-rel="popup" data-transition="flip" data-position-to="window" style="border-top-left-radius:0px" data-role="button">NEW VERSION RELEASED - CLICK HERE</a>
+
+			<div data-role="fieldcontain"><label for="keyname">Name</label>
+				<input name="keyname" id="keyname" placeholder="" value="" maxlength=20 data-mini="true" type="text">
+			</div>
+			
+			<div data-role="fieldcontain"><label for="keysecret">Key</label>
+				<input name="keysecret" id="keysecret" placeholder="" value="" data-mini="true" type="text">
+			</div>
+		
+			<div id="theme" data-role="fieldcontain">
+				<fieldset data-role="controlgroup" data-type="horizontal">
+					<legend>Global Theme</legend>
+					<input id="theme_0" name="theme" value="0" type="radio">
+					<label for="theme_0">Dark</label>
+					<input id="theme_1" name="theme" value="1" type="radio">
+					<label for="theme_1">Light</label>
+				</fieldset>
+			</div>
+
+			<div class="ui-grid-a">
+				<div class="ui-block-a">
+					<div data-role="fieldcontain">
+						<fieldset data-role="controlgroup">
+						<legend>Global Font Style</legend>
+							<input type="radio" name="font_style" id="font_style_0" value="0">
+							<label for="font_style_0" style="border-top-right-radius:0px">Style 1</label>
+							<input type="radio" name="font_style" id="font_style_1" value="1">
+							<label for="font_style_1">Style 2</label>
+							<input type="radio" name="font_style" id="font_style_2" value="2">
+							<label for="font_style_2">Style 3</label>
+							<input type="radio" name="font_style" id="font_style_3" value="3">
+							<label for="font_style_3" style="border-bottom-right-radius:0px">Style 4</label>
+						</fieldset>
+					</div>
+				</div>
+				<div class="ui-block-b">
+					<div data-role="fieldcontain">
+						<fieldset data-role="controlgroup">
+						<legend style="visibility:hidden">HIDDEN</legend>
+							<a id="font_preview_1" href="#font_preview_image_1" data-rel="popup" data-transition="flip" data-position-to="window" style="border-top-left-radius:0px" data-role="button">Preview</a>
+							<a id="font_preview_2" href="#font_preview_image_2" data-rel="popup" data-transition="flip" data-position-to="window" data-role="button">Preview</a>
+							<a id="font_preview_3" href="#font_preview_image_3" data-rel="popup" data-transition="flip" data-position-to="window" data-role="button">Preview</a>
+							<a id="font_preview_4" href="#font_preview_image_4" data-rel="popup" data-transition="flip" data-position-to="window" style="border-bottom-left-radius:0px" data-role="button">Preview</a>
+						</fieldset>
+					</div>
+				</div>
+			</div>
+			
+			<div class="ui-grid-a">
+				<div class="ui-block-a">
+					<input id="cancel" type="submit" data-theme="a" data-icon="delete" data-iconpos="left" value="Cancel">
+				</div>
+				<div class="ui-block-b">
+					<input id="save" type="submit" data-theme="b" data-icon="check" data-iconpos="right" value="Save">
+				</div>
+			</div>
+		</div>
+		<div id="footer" data-theme="b" data-role="footer" data-position="fixed">
+			<h3>
+				You have NUM_SPACES spaces remaining
+			</h3>
+		</div>
+		
+		<!-- POPUPS -->
+		<div data-role="popup" id="app_help" data-overlay-theme="b">
+			<a href="#" data-rel="back" data-role="button" data-theme="b" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+			<h3>Welcome to PebbleAuth!</h3>
+			<p>This application allows you to get your one time code codes straight from your Pebble Smartwatch.</p>
+			<p>Many websites support two-factor authentication to enhance your security including Facebook, Dropbox, AWS, and all of Google's services.</p>
+			<p>If you don't already have Google Authenticator installed on your smartphone I would recommend you install it as a backup.  To get your codes using PebbleAuth simply go through the setup process on the website such as Facebook.  You will either get a QR code to scan or be given a key which is a random 14-64 character long string.  Scan the barcode or enter the key into your Google Authenticator app.  If you were given a key you can enter this straight into the configuration page here.  If you were given a QR code there'll usually be a link to get a key for "other devices".  Enter this key into the the configuration page and you're good to go!</p>
+			<p>The font styles and theme are global and can be changed without entering a new key.  The Name field can be up to 20 characters long although only Style 2 supports showing that many characters.</p>
+			<p>Happy Two-Factoring!</p>
+		</div>
+		<div data-role="popup" id="out_of_date" data-overlay-theme="b">
+			<a href="#" data-rel="back" data-role="button" data-theme="b" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+			<h3>This version if out of date</h3>
+			<p>A new version of PebbleAuth has been released.  To update please unload PebbleAuth from the Pebble App, then load it again from your locker.</p>
+			<p>Don't worry. Your keys will not be removed in the process.</p>
+		</div>
+		<div data-role="popup" id="font_preview_image_1" class="photopopup" data-overlay-theme="b" data-corners="false">
+			<a href="#" data-rel="back"><img src="assets/font_style_1.png" alt="Photo landscape"></a>
+		</div>
+		<div data-role="popup" id="font_preview_image_2" class="photopopup" data-overlay-theme="b" data-corners="false">
+			<a href="#" data-rel="back"><img src="assets/font_style_2.png" alt="Photo landscape"></a>
+		</div>
+		<div data-role="popup" id="font_preview_image_3" class="photopopup" data-overlay-theme="b" data-corners="false">
+			<a href="#" data-rel="back"><img src="assets/font_style_3.png" alt="Photo landscape"></a>
+		</div>
+		<div data-role="popup" id="font_preview_image_4" class="photopopup" data-overlay-theme="b" data-corners="false">
+			<a href="#" data-rel="back"><img src="assets/font_style_4.png" alt="Photo landscape"></a>
+		</div>
+		<!-- /POPUPS -->		
+	</div>	
+	</body>
+	<script>
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+		ga('create', 'UA-50152651-1', 'oncouldvirtual.com');
+		ga('send', 'pageview');
+	</script>
+</html>
