@@ -920,7 +920,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		if (tz_offset != timezone_offset) {
 			timezone_offset = tz_offset;
 			persist_write_int(PS_TIMEZONE_KEY, timezone_offset);
-			#ifdef PBL_PLATFORM_APLITE
+			#ifdef PBL_SDK_2
 				refresh_screen_data(DOWN);
 			#endif
 		}

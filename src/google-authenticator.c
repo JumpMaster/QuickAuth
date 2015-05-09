@@ -29,7 +29,7 @@
 char *generateCode(const char *key, int timezone_offset) {
 	//long tm = time(NULL)/30;
 	
-	#ifdef PBL_PLATFORM_APLITE
+	#ifdef PBL_SDK_2
 		long tm = (time(NULL) + (timezone_offset*60))/30;
 	#else
 		long tm = time(NULL)/30;
