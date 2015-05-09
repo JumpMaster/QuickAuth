@@ -10,8 +10,7 @@
         "show_message": 4,
         "theme": 5,
         "timezone": 3,
-        "transmit_key": 2,
-        "watch_version_request": 11
+        "transmit_key": 2
     },
     "capabilities": [
         "configurable"

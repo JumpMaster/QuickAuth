@@ -53,8 +53,7 @@ enum {
 	JS_FONT_STYLE,
 	JS_DELETE_ALL,
 	JS_IDLE_TIMEOUT,
-	JS_BASALT_COLORS,
-	JS_WATCH_VERSION_REQUEST
+	JS_BASALT_COLORS
 };
 
 enum { 
@@ -63,6 +62,9 @@ enum {
 	LEFT,
 	RIGHT
 };
+
+
+//extern bool loading_complete;
 
 // define stubs
 void window_config_provider(Window *window);

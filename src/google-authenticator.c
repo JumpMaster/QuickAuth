@@ -28,7 +28,13 @@
 
 char *generateCode(const char *key, int timezone_offset) {
 	//long tm = time(NULL)/30;
-	long tm = (time(NULL) + (timezone_offset*60))/30;
+	
+	#ifdef PBL_PLATFORM_APLITE
+		long tm = (time(NULL) + (timezone_offset*60))/30;
+	#else
+		long tm = time(NULL)/30;
+	#endif
+		
 	uint8_t challenge[8];
 	for (int i = 8; i--; tm >>= 8) {
 		challenge[i] = tm;

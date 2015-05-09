@@ -1,7 +1,8 @@
-var MAX_OTP = 16;
+var MAX_OTP_COUNT = 16;
 var MAX_LABEL_LENGTH = 20;
 var MAX_KEY_LENGTH = 64;
 var MAX_MESSAGE_RETRIES = 5;
+var APP_VERSION = 20;
 
 var otp_count = 0;
 var aplite_theme = -1;
@@ -9,9 +10,6 @@ var basalt_colors = -1;
 var font_style = -1;
 var timezone_offset = 0;
 var idle_timeout = 0;
-var app_version = 20;
-var watch_version = 0;
-var config_requested = false;
 var message_send_retries = 0;
 var msg_data;
 var debug = true;
@@ -42,9 +40,36 @@ function checkKeyStringIsValid(key) {
 	return true;
 }
 
+function getWatchVersion() {
+	// 1 = Pebble OG
+	// 2 = Pebble Steel
+	// 3 = Pebble Time
+	// 3 = Pebble Basalt Emulator (currently Pebble Time)
+	// 4 = Pebble Time Steel
+	
+	var watch_version = 1;
+
+	if(Pebble.getActiveWatchInfo) {
+		// Available for use!
+		var watch_name = Pebble.getActiveWatchInfo().model;
+
+		if (watch_name.indexOf("pebble_time_steel") >= 0) {
+			watch_version = 4;
+		} else if (watch_name.indexOf("pebble_time") >= 0) {
+			watch_version = 3;
+		} else if (watch_name.indexOf("qemu_platform_basalt") >= 0) {
+			watch_version = 3;
+		} else if (watch_name.indexOf("pebble_steel") >= 0) {
+			watch_version = 2;
+		}
+	}
+	
+	return watch_version;
+}
+
 function loadLocalVariables() {
 	otp_count = 0;
-	for (var i=0; i<MAX_OTP; i++)
+	for (var i=0; i<MAX_OTP_COUNT; i++)
 	{
 		var tempKey = getItem("secret_pair"+i);
 		if (checkKeyStringIsValid(tempKey))
@@ -106,6 +131,8 @@ Pebble.addEventListener("ready",
 								// localStorage should only be accessed are the "ready" event is fired
 								loadLocalVariables();
 								
+								setItem("version", APP_VERSION);
+								
 								// Send timezone, keycount, and theme to watch
 								sendAppMessage({
 									"key_count":otp_count, 
@@ -113,8 +140,7 @@ Pebble.addEventListener("ready",
 									"basalt_colors":basalt_colors,
 									"timezone":timezone_offset,
 									"font_style":font_style,
-									"idle_timeout":idle_timeout,
-									"watch_version_request":0
+									"idle_timeout":idle_timeout
 									});
 
 								if (debug) {
@@ -124,23 +150,18 @@ Pebble.addEventListener("ready",
 									console.log("INFO: timezoneOffset="+timezone_offset);
 									console.log("INFO: font_style="+font_style);
 									console.log("INFO: idle_timeout="+idle_timeout);
+									console.log("INFO: getWatchVersion()="+getWatchVersion());
 								}
-								
-								//console.log("HERE1");
-								//for(var propertyName in Pebble) {
-								//	console.log(propertyName);
+
+								// ####### CLEAN APP ##############
+								//for (var i=0; i<MAX_OTP; i++)
+								//{
+								//	localStorage.removeItem('secret_pair'+i);
 								//}
-								//console.log("HERE2");
-								//console.log(Pebble.getExtensions());
-								//console.log("HERE3");
-								/*// ####### CLEAN APP ##############
-								for (var i=0; i<MAX_OTP; i++)
-								{
-									localStorage.removeItem('secret_pair'+i);
-								}
-								localStorage.removeItem("theme");
-								localStorage.removeItem("font_style");
-								localStorage.removeItem("idle_timeout");
+								//localStorage.removeItem("theme");
+								//localStorage.removeItem("basalt_colors");
+								//localStorage.removeItem("font_style");
+								//localStorage.removeItem("idle_timeout");
 								// ####### /CLEAN APP ##############*/
 							}
 						);
@@ -151,7 +172,7 @@ function sendKeyToWatch(secret) {
 
 function confirmDelete(secret) {
 	var blnFound = false;
-	for (var i = 0; i < MAX_OTP;i++) {
+	for (var i = 0; i < MAX_OTP_COUNT;i++) {
 		var savedSecret = getItem('secret_pair'+i);
 		
 		if (savedSecret !== null && savedSecret.indexOf(secret) != -1)
@@ -187,15 +208,6 @@ Pebble.addEventListener("appmessage",
 										console.log("INFO: Deleting key: "+e.payload.delete_key);
 									confirmDelete(e.payload.delete_key);
 								}
-								else if (e.payload.watch_version_request) {
-									watch_version = e.payload.watch_version_request;
-									if (debug)
-										console.log("INFO: Received watch version: "+watch_version);
-									if (config_requested) {
-										config_requested = false;
-										openConfigurationPage();
-									}
-								}
 								else {
 									if (debug)
 										console.log("INFO: Unknown payload:"+e.payload);
@@ -204,29 +216,20 @@ Pebble.addEventListener("appmessage",
 
 Pebble.addEventListener('showConfiguration', function(e) {
 	sendAppMessage({"idle_timeout":-1});
-	
-	if (watch_version === 0) {
-		config_requested = true;
-		return false;
-	}
-	
-	openConfigurationPage();
-});
 
-function openConfigurationPage() {
 		var url = 'http://oncloudvirtual.com/pebble/pebbleauth/v'+
-		app_version+'/'+
+		APP_VERSION+'/'+
 		'?otp_count='+otp_count+
 		'&theme='+aplite_theme+
 		'&basalt_colors='+basalt_colors+
 		'&font_style='+font_style+
 		'&idle_timeout='+idle_timeout+
-		'&watch_version='+watch_version;
+		'&watch_version='+getWatchVersion();
 
 	if (debug)
 		console.log("INFO: "+url);
 	Pebble.openURL(url);
-}
+});
 
 Pebble.addEventListener("webviewclosed",
 							function(e) {
@@ -237,7 +240,7 @@ Pebble.addEventListener("webviewclosed",
 								if(!isNaN(configuration.delete_all)) {
 									if (debug)
 										console.log("INFO: Delete all requested");
-									for (i = 0; i < MAX_OTP;i++) {
+									for (i = 0; i < MAX_OTP_COUNT;i++) {
 										if (debug)
 											console.log("INFO: Deleting key "+i);
 										localStorage.removeItem('secret_pair'+i);
@@ -299,8 +302,7 @@ Pebble.addEventListener("webviewclosed",
 										.substring(0, MAX_LABEL_LENGTH);
 									var secretPair = label + ":" + secret;
 									
-									if (!checkKeyStringIsValid(secretPair))
-										return;
+									var valid_key = checkKeyStringIsValid(secretPair);
 									
 									var blnKeyExists = false;
 									for (i=0;i<otp_count;i++) {
@@ -314,7 +316,7 @@ Pebble.addEventListener("webviewclosed",
 											config.transmit_key = secretPair;
 										}
 									}
-									if(!blnKeyExists && otp_count < MAX_OTP) {
+									if(valid_key && !blnKeyExists && otp_count < MAX_OTP_COUNT) {
 										if (debug)
 											console.log("INFO: Uploading new key:"+secretPair);
 										
@@ -326,7 +328,7 @@ Pebble.addEventListener("webviewclosed",
 										if (debug)
 											console.log("INFO: Code exists, updating label");
 									}
-									else if (otp_count >= MAX_OTP) {
+									else if (otp_count >= MAX_OTP_COUNT) {
 										if (debug)
 											console.log("WARN: Too many codes..."+otp_count);
 									}

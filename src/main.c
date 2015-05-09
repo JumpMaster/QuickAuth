@@ -188,7 +188,7 @@ void on_animation_stopped(Animation *anim, bool finished, void *context) {
 }
 
 void on_animation_stopped_callback(Animation *anim, bool finished, void *context) {
-	#ifdef PBL_PLATFORM_APLITE
+	#ifdef PBL_SDK_2
 		on_animation_stopped(anim, finished, context);
 	#endif
 	animation_control();
@@ -210,7 +210,7 @@ void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *fini
 		animation_set_handlers((Animation*) anim, handlers, NULL);
 	}
 	
-	#ifdef PBL_PLATFORM_APLITE
+	#ifdef PBL_SDK_2
 		if (!callback) {
 			AnimationHandlers handlers = {
 				.stopped = (AnimationStoppedHandler) on_animation_stopped
@@ -274,7 +274,7 @@ void animate_code_on() {
 		strcpy(pin_text, generateCode(otp_keys[otp_selected], timezone_offset));
 	else
 		strcpy(pin_text, "123456");
-	
+	//strcpy(pin_text, "918572");
 	otp_updated_at_tick = otp_update_tick;
 	
 	GRect start = text_pin_rect;
@@ -333,9 +333,8 @@ void animate_second_counter(bool toZero) {
 	GRect start = layer_get_frame(text_layer_get_layer(countdown_layer));
 	GRect finish = countdown_rect;
 
-	float boxpercent = (30-(seconds%30))/((double)30);
-	
-	finish.size.w = finish.size.w * boxpercent;
+	//finish.size.w = ((float)display_bounds.size.w / 30) * (30-(seconds%30));
+	finish.size.w = ((float)4.8) * (30-(seconds%30));
 	
 	int animationTime = 900;
 	if (toZero) {
@@ -556,9 +555,9 @@ static void details_window_load(Window *window) {
 	text_layer_set_text_alignment(details_title_layer, GTextAlignmentLeft);
 	text_layer_set_font(details_title_layer, font_label.font);
 	layer_add_child(details_window_layer, text_layer_get_layer(details_title_layer));
-
 	
 	window_set_background_color(details_window, bg_color);
+	
 	text_layer_set_text_color(details_title_layer, fg_color);
 	
 	text_layer_set_text(details_title_layer, otp_labels[details_selected_key]);
@@ -590,6 +589,11 @@ static void key_menu_select_callback(int index, void *ctx) {
 	details_selected_key = index;	
 	
 	details_window = window_create();
+	
+	#ifdef PBL_SDK_2
+		window_set_fullscreen(details_window, true);
+	#endif
+		
 	window_set_window_handlers(details_window, (WindowHandlers) {
 		.load = details_window_load,
 		.unload = details_window_unload,
@@ -643,6 +647,11 @@ void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {
 	resetIdleTime();
 	if (watch_otp_count) {
 		select_window = window_create();
+		
+		#ifdef PBL_SDK_2
+			window_set_fullscreen(select_window, true);
+		#endif
+			
 		window_set_window_handlers(select_window, (WindowHandlers) {
 			.load = select_window_load,
 			.unload = select_window_unload,
@@ -814,13 +823,12 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 	resetIdleTime();
 	Tuple *key_count_tuple = dict_find(iter, JS_KEY_COUNT);
 	Tuple *key_tuple = dict_find(iter, JS_TRANSMIT_KEY);
-	Tuple *key_delete_tuple = dict_find(iter, JS_DELETE_KEY);
 	Tuple *timezone_tuple = dict_find(iter, JS_TIMEZONE);
+	Tuple *key_delete_tuple = dict_find(iter, JS_DELETE_KEY);
 	Tuple *font_style_tuple = dict_find(iter, JS_FONT_STYLE);
 	Tuple *delete_all_tuple = dict_find(iter, JS_DELETE_ALL);
 	Tuple *idle_timeout_tuple = dict_find(iter, JS_IDLE_TIMEOUT);
 	Tuple *key_request_tuple = dict_find(iter, JS_REQUEST_KEY);
-	Tuple *watch_version_request_tuple = dict_find(iter, JS_WATCH_VERSION_REQUEST);
 	
 	#ifdef PBL_COLOR
 		Tuple *basalt_colors_tuple = dict_find(iter, JS_BASALT_COLORS);
@@ -912,7 +920,9 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		if (tz_offset != timezone_offset) {
 			timezone_offset = tz_offset;
 			persist_write_int(PS_TIMEZONE_KEY, timezone_offset);
-			refresh_screen_data(DOWN);
+			#ifdef PBL_PLATFORM_APLITE
+				refresh_screen_data(DOWN);
+			#endif
 		}
 		if (DEBUG)
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Timezone Offset: %d", timezone_offset);
@@ -983,13 +993,6 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		int requested_key_value = key_request_tuple->value->int16;
 		send_key(requested_key_value);
 	} // key_request_tuple
-	
-	if (watch_version_request_tuple) {
-		int watch_version = watch_info_get_model();
-		sendJSMessage(TupletInteger(JS_WATCH_VERSION_REQUEST, watch_version));
-		if (DEBUG)
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Sent watch version: %d", watch_version);
-	}
 }
 
 void in_dropped_handler(AppMessageResult reason, void *context) {
@@ -1052,7 +1055,7 @@ static void window_load(Window *window) {
 	countdown_layer = text_layer_create(countdown_start);
 	layer_add_child(window_layer, text_layer_get_layer(countdown_layer));
 	
-	text_label_rect = GRect(0, 50, display_bounds.size.w, 40);
+	text_label_rect = GRect(2, 50, display_bounds.size.w-2, 40);
 	text_label_layer = text_layer_create(text_label_rect);
 	text_layer_set_background_color(text_label_layer, GColorClear);
 	text_layer_set_text_alignment(text_label_layer, GTextAlignmentLeft);
@@ -1092,7 +1095,9 @@ void handle_init(void) {
 		.unload = window_unload,
 	});
 	
-	window_set_fullscreen(main_window, true);
+	#ifdef PBL_SDK_2
+		window_set_fullscreen(main_window, true);
+	#endif
 	window_stack_push(main_window, false /* Animated */);
 	
 	app_message_register_inbox_received(in_received_handler);
