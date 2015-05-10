@@ -426,7 +426,7 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 	
 	if (!loading_complete || override_second_counter)
 		return;
-
+	
 	animate_second_counter(false);
 }
 
@@ -864,6 +864,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 				APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: REQUESTING CODES");
 			loading_complete = false;
 			requesting_code = 1;
+			request_key(requesting_code++);
 		}
 	} // key_count_tuple
 	

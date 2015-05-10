@@ -246,6 +246,10 @@ Pebble.addEventListener("webviewclosed",
 										localStorage.removeItem('secret_pair'+i);
 									}
 									otp_count = 0;
+									localStorage.removeItem("theme");
+									localStorage.removeItem("basalt_colors");
+									localStorage.removeItem("font_style");
+									localStorage.removeItem("idle_timeout");
 									sendAppMessage(configuration);
 									return;
 								}
