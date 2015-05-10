@@ -229,7 +229,7 @@ void animate_label_on() {
 		strcpy(label_text, otp_labels[otp_selected]);
 	else
 		strcpy(label_text, "EMPTY");
-	
+
 	GRect start = text_label_rect;
 	switch(animation_direction)
 	{
@@ -274,7 +274,7 @@ void animate_code_on() {
 		strcpy(pin_text, generateCode(otp_keys[otp_selected], timezone_offset));
 	else
 		strcpy(pin_text, "123456");
-	//strcpy(pin_text, "918572");
+	
 	otp_updated_at_tick = otp_update_tick;
 	
 	GRect start = text_pin_rect;
@@ -333,9 +333,8 @@ void animate_second_counter(bool toZero) {
 	GRect start = layer_get_frame(text_layer_get_layer(countdown_layer));
 	GRect finish = countdown_rect;
 
-	//finish.size.w = ((float)display_bounds.size.w / 30) * (30-(seconds%30));
 	finish.size.w = ((float)4.8) * (30-(seconds%30));
-	
+
 	int animationTime = 900;
 	if (toZero) {
 		finish.origin.y = display_bounds.size.h;
@@ -1008,7 +1007,7 @@ void load_persistent_data() {
 		if (persist_exists(PS_BASALT_COLORS))
 			persist_read_string(PS_BASALT_COLORS, basalt_colors, 13);
 		else
-			memcpy(basalt_colors, "00AAFFFFFFFF"+'\0', 13);
+			memcpy(basalt_colors, "0000FFFFFFFF"+'\0', 13);
 	#else
 		aplite_theme = persist_exists(PS_APLITE_THEME) ? persist_read_int(PS_APLITE_THEME) : 0;
 	#endif

@@ -12,7 +12,7 @@ var timezone_offset = 0;
 var idle_timeout = 0;
 var message_send_retries = 0;
 var msg_data;
-var debug = true;
+var debug = false;
 
 function checkKeyStringIsValid(key) {
 	if (debug)
@@ -85,7 +85,7 @@ function loadLocalVariables() {
 	timezone_offset = new Date().getTimezoneOffset();
 	
 	aplite_theme = !aplite_theme ? 0 : aplite_theme;
-	basalt_colors = !basalt_colors ? "00AAFFFFFFFF" : basalt_colors;
+	basalt_colors = !basalt_colors ? "0000FFFFFFFF" : basalt_colors;
 	font_style = !font_style ? 0 : font_style;
 	idle_timeout = idle_timeout === null ? 300 : parseInt(idle_timeout);
 }

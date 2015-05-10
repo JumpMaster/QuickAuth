@@ -25,7 +25,7 @@ typedef struct {
 #define MAX_KEY_LENGTH 65 // 64 + termination
 #define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
 #define APP_VERSION 20
-#define DEBUG true
+#define DEBUG false
 
 #define MyTupletCString(_key, _cstring) \
 ((const Tuplet) { .type = TUPLE_CSTRING, .key = _key, .cstring = { .data = _cstring, .length = strlen(_cstring) + 1 }})
