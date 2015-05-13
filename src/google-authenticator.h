@@ -20,8 +20,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _GOOGLEAUTHENTICATOR_H_
-#define _GOOGLEAUTHENTICATOR_H_
+#pragma once
 
 #include <stdint.h>
 
@@ -30,5 +29,3 @@
 	
 char *generateCode(const char *key, int timezone_offset)
 	__attribute__((visibility("hidden")));
-
-#endif /* _GOOGLEAUTHENTICATOR_H_ */

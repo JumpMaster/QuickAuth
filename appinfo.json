@@ -21,8 +21,13 @@
     "resources": {
         "media": [
             {
+                "file": "images/Padlock.png",
+                "name": "IMAGE_PADLOCK",
+                "type": "png"
+            },
+            {
                 "file": "images/Pebble_Star2.png",
-                "name": "PBI_IMAGE_ICON_STAR",
+                "name": "PNG_IMAGE_ICON_STAR",
                 "type": "png"
             },
             {

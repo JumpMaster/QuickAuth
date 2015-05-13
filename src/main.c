@@ -8,6 +8,7 @@
 #include "pebble.h"
 #include "main.h"
 #include "google-authenticator.h"
+#include "dod_window.h"
 #include <ctype.h>
 
 // Main Window
@@ -26,23 +27,15 @@ static GRect display_bounds;
 Window *select_window;
 static MenuLayer *select_menu_layer;
 
-// Details Window
-Window *details_window;
-static TextLayer *details_title_layer;
-static TextLayer *details_key_layer;
-static ActionBarLayer *details_action_bar_layer;
-static GBitmap *image_icon_fav;
-static GBitmap *image_icon_del;
-
 // Colors
-static GColor bg_color;
-static GColor fg_color;
+GColor bg_color;
+GColor fg_color;
 
 // Fonts
 static unsigned int font_style;
 static AppFont font_pin;
 static AppFont font_label;
-static GFont font_UNISPACE_20;
+//static GFont font_UNISPACE_20;
 
 bool fonts_changed;
 bool loading_complete = false;
@@ -96,6 +89,20 @@ void resetIdleTime() {
 void update_screen_fonts() {
 	fonts_changed = true;
 	refresh_screen_data(DOWN);
+}
+
+void set_default_key(int key_id) {
+	otp_default = key_id;
+	persist_write_int(PS_DEFAULT_KEY, otp_default);
+	
+	if (otp_selected != otp_default) {
+		otp_selected = otp_default;
+		refresh_screen_data(DOWN);
+	}
+}
+
+void close_select_window() {
+	window_stack_remove(select_window, false);
 }
 
 void expand_key(char *inputString, bool new_code) {
@@ -485,7 +492,8 @@ void sendJSMessage(Tuplet data_tuple) {
 	DictionaryIterator *iter;
 	int begin = app_message_outbox_begin(&iter);
 	
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Begin sendJSMessage = %d", begin);
+	if (DEBUG)
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Begin sendJSMessage = %d", begin);
 	
 	if (iter == NULL) {
 		return;
@@ -495,14 +503,15 @@ void sendJSMessage(Tuplet data_tuple) {
 	dict_write_end(iter);
 	
 	int send = app_message_outbox_send();
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Send sendJSMessage = %d", send);
+	if (DEBUG)
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Send sendJSMessage = %d", send);
 }
 
-void request_delete(char *delete_key) {
+void request_delete(int key_id) {
 	if (DEBUG)
-		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Pebble Requesting delete: %s", delete_key);
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Pebble Requesting delete: %s", otp_keys[key_id]);
 
-	sendJSMessage(MyTupletCString(JS_DELETE_KEY, delete_key));
+	sendJSMessage(MyTupletCString(JS_DELETE_KEY, otp_keys[key_id]));
 }
 
 void request_key(int code_id) {
@@ -530,89 +539,6 @@ void send_key(int requested_key) {
 	sendJSMessage(MyTupletCString(JS_TRANSMIT_KEY, keylabelpair));
 }
 
-void details_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context) {
-	resetIdleTime();
-	otp_default = details_selected_key;
-	persist_write_int(PS_DEFAULT_KEY, otp_default);
-	
-	if (otp_selected != otp_default) {
-		otp_selected = otp_default;
-		refresh_screen_data(DOWN);
-	}
-	
-	window_stack_remove(select_window, false);
-	window_stack_pop(true);
-}
-
-void details_actionbar_down_click_handler(ClickRecognizerRef recognizer, void *context) {
-	resetIdleTime();
-	request_delete(otp_keys[details_selected_key]);
-
-	window_stack_remove(select_window, false);
-	window_stack_pop(true);
-}
-
-void details_actionbar_config_provider(void *context) {
-	window_single_click_subscribe(BUTTON_ID_UP, (ClickHandler) details_actionbar_up_click_handler);
-	window_single_click_subscribe(BUTTON_ID_DOWN, (ClickHandler) details_actionbar_down_click_handler);
-}
-
-static void details_window_load(Window *window) {
-	
-	Layer *details_window_layer = window_get_root_layer(details_window);
-	GRect bounds = layer_get_frame(details_window_layer);
-	
-	GRect title_text_rect;
-	
-	if (DEBUG) {
-		GRect key_text_rect = GRect(0, 50, 115, 125);
-		details_key_layer = text_layer_create(key_text_rect);
-		text_layer_set_background_color(details_key_layer, GColorClear);
-		text_layer_set_text_alignment(details_key_layer, GTextAlignmentLeft);
-		
-		font_UNISPACE_20 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_UNISPACE_20));
-		text_layer_set_font(details_key_layer, font_UNISPACE_20);
-		layer_add_child(details_window_layer, text_layer_get_layer(details_key_layer));
-		text_layer_set_text_color(details_key_layer, fg_color);
-		text_layer_set_text(details_key_layer, otp_keys[details_selected_key]);
-		title_text_rect = GRect(0, 0, bounds.size.w, 40);
-	} else
-		title_text_rect = GRect(0, 55, bounds.size.w, 40);
-		
-	details_title_layer = text_layer_create(title_text_rect);
-	text_layer_set_background_color(details_title_layer, GColorClear);
-	text_layer_set_text_alignment(details_title_layer, GTextAlignmentLeft);
-	text_layer_set_font(details_title_layer, font_label.font);
-	layer_add_child(details_window_layer, text_layer_get_layer(details_title_layer));
-	
-	window_set_background_color(details_window, bg_color);
-	
-	text_layer_set_text_color(details_title_layer, fg_color);
-	
-	text_layer_set_text(details_title_layer, otp_labels[details_selected_key]);
-	
-	image_icon_fav = gbitmap_create_with_resource(RESOURCE_ID_PBI_IMAGE_ICON_STAR);
-	image_icon_del = gbitmap_create_with_resource(RESOURCE_ID_PNG_IMAGE_ICON_TRASH);
-	
-	// Initialize the action bar:
-	details_action_bar_layer = action_bar_layer_create();
-	action_bar_layer_set_background_color(details_action_bar_layer, fg_color);
-	action_bar_layer_set_click_config_provider(details_action_bar_layer, details_actionbar_config_provider);
-	action_bar_layer_set_icon(details_action_bar_layer, BUTTON_ID_UP, image_icon_fav);
-	action_bar_layer_set_icon(details_action_bar_layer, BUTTON_ID_DOWN, image_icon_del);
-	action_bar_layer_add_to_window(details_action_bar_layer, details_window);
-}
-
-void details_window_unload(Window *window) {
-	action_bar_layer_destroy(details_action_bar_layer);
-	gbitmap_destroy(image_icon_fav);
-	gbitmap_destroy(image_icon_del);
-	text_layer_destroy(details_title_layer);
-	text_layer_destroy(details_key_layer);
-	fonts_unload_custom_font(font_UNISPACE_20);
-	window_destroy(details_window);
-}
-	
 static uint16_t select_menu_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *context) {
 	return watch_otp_count;
 }
@@ -627,20 +553,7 @@ static int16_t select_menu_get_cell_height_callback(struct MenuLayer *menu_layer
 
 static void select_menu_select_callback(struct MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
 	resetIdleTime();
-	details_selected_key = cell_index->row;
-	
-	details_window = window_create();
-	
-	#ifdef PBL_SDK_2
-		window_set_fullscreen(details_window, true);
-	#endif
-	
-	window_set_window_handlers(details_window, (WindowHandlers) {
-		.load = details_window_load,
-		.unload = details_window_unload,
-	});
-	
-	window_stack_push(details_window, true /* Animated */);
+	dod_window_push(cell_index->row);
 }
 
 static void select_menu_draw_header_callback(GContext *ctx, const Layer *cell_layer, uint16_t section_index, void *context) {

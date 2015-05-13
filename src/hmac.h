@@ -15,14 +15,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _HMAC_H_
-#define _HMAC_H_
-
+#pragma once
 #include <stdint.h>
 
 void hmac_sha1(const uint8_t *key, int keyLength,
                const uint8_t *data, int dataLength,
                uint8_t *result, int resultLength)
  __attribute__((visibility("hidden")));
-
-#endif /* _HMAC_H_ */

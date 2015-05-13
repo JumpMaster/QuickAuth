@@ -15,8 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SHA1_H__
-#define SHA1_H__
+#pragma once
 
 #include <stdint.h>
 
@@ -36,5 +35,3 @@ void sha1_update(SHA1_INFO *sha1_info, const uint8_t *buffer, int count)
   __attribute__((visibility("hidden")));
 void sha1_final(SHA1_INFO *sha1_info, uint8_t digest[20])
   __attribute__((visibility("hidden")));
-
-#endif

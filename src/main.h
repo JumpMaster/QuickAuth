@@ -5,8 +5,7 @@
 // https://github.com/JumpMaster/PebbleAuth
 //
 
-#ifndef _MAIN_H_
-#define _MAIN_H_
+#pragma once
 
 #include "pebble.h"
 	
@@ -66,17 +65,21 @@ enum {
 };
 
 
-//extern bool loading_complete;
+extern GColor bg_color;
+extern GColor fg_color;
+
+void set_default_key(int key_id);
+void request_delete(int key_id);
+void close_select_window();
+void resetIdleTime();
 
 // define stubs
 void window_config_provider(Window *window);
 void request_key(int code_id);
 void set_fonts();
-static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed);
+//static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed);
 void start_refreshing();
 void finish_refreshing();
 void animation_control();
 void set_display_colors();
 void apply_display_colors();
-
-#endif /* _MAIN_H_ */
