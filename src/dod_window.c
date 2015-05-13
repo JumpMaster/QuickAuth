@@ -3,12 +3,12 @@
 #include "dod_window.h"
 
 
-static Window *dord_main_window;
-static TextLayer *dord_label_layer;
-static BitmapLayer *dord_icon_layer;
-static ActionBarLayer *dord_action_bar_layer;
+	static Window *dod_main_window;
+static TextLayer *dod_label_layer;
+static BitmapLayer *dod_icon_layer;
+static ActionBarLayer *dod_action_bar_layer;
 
-static GBitmap *dord_icon_bitmap, *dord_fav_bitmap, *dord_del_bitmap;
+static GBitmap *dod_icon_bitmap, *dod_fav_bitmap, *dod_del_bitmap;
 static int s_key_id;
 
 void dod_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -37,56 +37,56 @@ static void window_load(Window *window) {
 	Layer *window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(window_layer);
 
-	dord_icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_PADLOCK);
-	GRect bitmap_bounds = gbitmap_get_bounds(dord_icon_bitmap);
+	dod_icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_PADLOCK);
+	GRect bitmap_bounds = gbitmap_get_bounds(dod_icon_bitmap);
 
-	dord_icon_layer = bitmap_layer_create(GRect((bounds.size.w / 2) - (bitmap_bounds.size.w / 2) - (ACTION_BAR_WIDTH / 2), 15, bitmap_bounds.size.w, bitmap_bounds.size.h));
-	bitmap_layer_set_bitmap(dord_icon_layer, dord_icon_bitmap);
-	bitmap_layer_set_compositing_mode(dord_icon_layer, GCompOpSet);
-	layer_add_child(window_layer, bitmap_layer_get_layer(dord_icon_layer));
+	dod_icon_layer = bitmap_layer_create(GRect((bounds.size.w / 2) - (bitmap_bounds.size.w / 2) - (ACTION_BAR_WIDTH / 2), 15, bitmap_bounds.size.w, bitmap_bounds.size.h));
+	bitmap_layer_set_bitmap(dod_icon_layer, dod_icon_bitmap);
+	bitmap_layer_set_compositing_mode(dod_icon_layer, GCompOpSet);
+	layer_add_child(window_layer, bitmap_layer_get_layer(dod_icon_layer));
 
-	dord_label_layer = text_layer_create(GRect(10, 15 + bitmap_bounds.size.h + 5, 124 - ACTION_BAR_WIDTH, bounds.size.h - (10 + bitmap_bounds.size.h + 15)));
-	text_layer_set_text(dord_label_layer, DIALOG_CHOICE_WINDOW_MESSAGE);
-	text_layer_set_text_color(dord_label_layer, fg_color);
-	text_layer_set_background_color(dord_label_layer, GColorClear);
-	text_layer_set_text_alignment(dord_label_layer, GTextAlignmentCenter);
-	text_layer_set_font(dord_label_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-	layer_add_child(window_layer, text_layer_get_layer(dord_label_layer));
+	dod_label_layer = text_layer_create(GRect(10, 15 + bitmap_bounds.size.h + 5, 124 - ACTION_BAR_WIDTH, bounds.size.h - (10 + bitmap_bounds.size.h + 15)));
+	text_layer_set_text(dod_label_layer, DIALOG_CHOICE_WINDOW_MESSAGE);
+	text_layer_set_text_color(dod_label_layer, fg_color);
+	text_layer_set_background_color(dod_label_layer, GColorClear);
+	text_layer_set_text_alignment(dod_label_layer, GTextAlignmentCenter);
+	text_layer_set_font(dod_label_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+	layer_add_child(window_layer, text_layer_get_layer(dod_label_layer));
 
-	dord_fav_bitmap = gbitmap_create_with_resource(RESOURCE_ID_PNG_IMAGE_ICON_STAR);
-	dord_del_bitmap = gbitmap_create_with_resource(RESOURCE_ID_PNG_IMAGE_ICON_TRASH);
+	dod_fav_bitmap = gbitmap_create_with_resource(RESOURCE_ID_PNG_IMAGE_ICON_STAR);
+	dod_del_bitmap = gbitmap_create_with_resource(RESOURCE_ID_PNG_IMAGE_ICON_TRASH);
 
-	dord_action_bar_layer = action_bar_layer_create();
-	action_bar_layer_set_icon(dord_action_bar_layer, BUTTON_ID_UP, dord_fav_bitmap);
-	action_bar_layer_set_icon(dord_action_bar_layer, BUTTON_ID_DOWN, dord_del_bitmap);
-	action_bar_layer_set_click_config_provider(dord_action_bar_layer, dod_actionbar_config_provider);
-	action_bar_layer_add_to_window(dord_action_bar_layer, window);
+	dod_action_bar_layer = action_bar_layer_create();
+	action_bar_layer_set_icon(dod_action_bar_layer, BUTTON_ID_UP, dod_fav_bitmap);
+	action_bar_layer_set_icon(dod_action_bar_layer, BUTTON_ID_DOWN, dod_del_bitmap);
+	action_bar_layer_set_click_config_provider(dod_action_bar_layer, dod_actionbar_config_provider);
+	action_bar_layer_add_to_window(dod_action_bar_layer, window);
 }
 
 static void window_unload(Window *window) {
-	text_layer_destroy(dord_label_layer);
-	action_bar_layer_destroy(dord_action_bar_layer);
-	bitmap_layer_destroy(dord_icon_layer);
+	text_layer_destroy(dod_label_layer);
+	action_bar_layer_destroy(dod_action_bar_layer);
+	bitmap_layer_destroy(dod_icon_layer);
 
-	gbitmap_destroy(dord_icon_bitmap); 
-	gbitmap_destroy(dord_fav_bitmap);
-	gbitmap_destroy(dord_del_bitmap);
+	gbitmap_destroy(dod_icon_bitmap); 
+	gbitmap_destroy(dod_fav_bitmap);
+	gbitmap_destroy(dod_del_bitmap);
 
 	window_destroy(window);
-	dord_main_window = NULL;
+	dod_main_window = NULL;
 }
 
 void dod_window_push(int key_id) {
-	if(!dord_main_window) {
+	if(!dod_main_window) {
 		s_key_id = key_id;
-		dord_main_window = window_create();
+		dod_main_window = window_create();
 
-		window_set_background_color(dord_main_window, bg_color);
+		window_set_background_color(dod_main_window, bg_color);
 
-		window_set_window_handlers(dord_main_window, (WindowHandlers) {
+		window_set_window_handlers(dod_main_window, (WindowHandlers) {
 			.load = window_load,
 			.unload = window_unload,
 		});
 	}
-	window_stack_push(dord_main_window, true);
+	window_stack_push(dod_main_window, true);
 }
