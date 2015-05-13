@@ -24,9 +24,7 @@ static GRect display_bounds;
 
 // Selection Window
 Window *select_window;
-static SimpleMenuLayer *key_menu_layer;
-static SimpleMenuSection key_menu_sections[1];
-static SimpleMenuItem key_menu_items[MAX_OTP];
+static MenuLayer *select_menu_layer;
 
 // Details Window
 Window *details_window;
@@ -179,6 +177,11 @@ void check_load_status() {
 		if (DEBUG)
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: FINISHED REQUESTING");
 	}
+	else if (requesting_code > 0) {
+		if (DEBUG)
+			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: REQUESTING ANOTHER!");
+		request_key(requesting_code++);
+	}
 }
 
 void on_animation_stopped(Animation *anim, bool finished, void *context) {
@@ -319,9 +322,9 @@ void animate_code_off() {
 void animate_second_counter(bool toZero) {
 	time_t temp = time(NULL);
 	struct tm *time = localtime(&temp);
-	int seconds = time->tm_sec;
-	
-	if (seconds % 30 == 0)
+	int seconds = 30-(time->tm_sec%30);
+
+	if (seconds == 30)
 		otp_update_tick++;
 			
 	if	(otp_updated_at_tick != otp_update_tick) {
@@ -333,8 +336,32 @@ void animate_second_counter(bool toZero) {
 	GRect start = layer_get_frame(text_layer_get_layer(countdown_layer));
 	GRect finish = countdown_rect;
 
-	finish.size.w = ((float)4.8) * (30-(seconds%30));
+	finish.size.w = ((float)4.8) * seconds;
 
+	#ifdef PBL_COLOR
+		switch(seconds)
+		{
+			case 6 :
+				text_layer_set_background_color(countdown_layer, GColorRed);
+				break;
+			case 5 :
+				text_layer_set_background_color(countdown_layer, fg_color);
+				break;
+			case 4 :
+				text_layer_set_background_color(countdown_layer, GColorRed);
+				break;
+			case 3 :
+				text_layer_set_background_color(countdown_layer, fg_color);
+				break;
+			case 2 :
+				text_layer_set_background_color(countdown_layer, GColorRed);
+				break;
+			case 1 :
+				text_layer_set_background_color(countdown_layer, fg_color);
+				break;
+		}
+	#endif
+	
 	int animationTime = 900;
 	if (toZero) {
 		finish.origin.y = display_bounds.size.h;
@@ -342,7 +369,7 @@ void animate_second_counter(bool toZero) {
 		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, animationTime, true);
 	} else {
 		if (seconds % 30 == 0) {
-				animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, animationTime, false);
+			animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, animationTime, false);
 		}
 		else
 			animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, animationTime, false);
@@ -456,7 +483,9 @@ void down_single_click_handler(ClickRecognizerRef recognizer, void *context) {
 
 void sendJSMessage(Tuplet data_tuple) {
 	DictionaryIterator *iter;
-	app_message_outbox_begin(&iter);
+	int begin = app_message_outbox_begin(&iter);
+	
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Begin sendJSMessage = %d", begin);
 	
 	if (iter == NULL) {
 		return;
@@ -465,7 +494,8 @@ void sendJSMessage(Tuplet data_tuple) {
 	dict_write_tuplet(iter, &data_tuple);
 	dict_write_end(iter);
 	
-	app_message_outbox_send();
+	int send = app_message_outbox_send();
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Send sendJSMessage = %d", send);
 }
 
 void request_delete(char *delete_key) {
@@ -582,17 +612,29 @@ void details_window_unload(Window *window) {
 	fonts_unload_custom_font(font_UNISPACE_20);
 	window_destroy(details_window);
 }
+	
+static uint16_t select_menu_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *context) {
+	return watch_otp_count;
+}
 
-static void key_menu_select_callback(int index, void *ctx) {
+static void select_menu_draw_row_callback(GContext *ctx, Layer *cell_layer, MenuIndex *cell_index, void *context) {
+		menu_cell_basic_draw(ctx, cell_layer, otp_labels[cell_index->row], NULL, NULL);
+}
+
+static int16_t select_menu_get_cell_height_callback(struct MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
+	return SELECT_WINDOW_CELL_HEIGHT;
+}
+
+static void select_menu_select_callback(struct MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
 	resetIdleTime();
-	details_selected_key = index;	
+	details_selected_key = cell_index->row;
 	
 	details_window = window_create();
 	
 	#ifdef PBL_SDK_2
 		window_set_fullscreen(details_window, true);
 	#endif
-		
+	
 	window_set_window_handlers(details_window, (WindowHandlers) {
 		.load = details_window_load,
 		.unload = details_window_unload,
@@ -601,44 +643,41 @@ static void key_menu_select_callback(int index, void *ctx) {
 	window_stack_push(details_window, true /* Animated */);
 }
 
+static void select_menu_draw_header_callback(GContext *ctx, const Layer *cell_layer, uint16_t section_index, void *context) {
+	menu_cell_basic_header_draw(ctx, cell_layer, NULL);
+}
+
+static int16_t select_menu_get_header_height_callback(struct MenuLayer *menu_layer, uint16_t section_index, void *context) {
+	return MENU_CELL_BASIC_HEADER_HEIGHT;
+}
+
+static uint16_t select_menu_get_num_sections_callback(struct MenuLayer *menu_layer, void *context) {
+	return 1;
+}
+
 static void select_window_load(Window *window) {
+	Layer *window_layer = window_get_root_layer(window);
+	GRect bounds = layer_get_bounds(window_layer);
 
-	int num_menu_items = 0;
-	
-	for(unsigned int i = 0; i < watch_otp_count; i++) {
-		if (DEBUG) {
-			key_menu_items[num_menu_items++] = (SimpleMenuItem) {
-				.title = otp_labels[i],
-				.callback = key_menu_select_callback,
-				.subtitle = otp_keys[i],
-			};
-		}
-		else {
-			key_menu_items[num_menu_items++] = (SimpleMenuItem) {
-				.title = otp_labels[i],
-				.callback = key_menu_select_callback,
-			};
-		}
-	}
-	
-	// Bind the menu items to the corresponding menu sections
-	key_menu_sections[0] = (SimpleMenuSection){
-		.num_items = num_menu_items,
-		.items = key_menu_items,
-	};
-
-	Layer *select_window_layer = window_get_root_layer(select_window);
-	GRect bounds = layer_get_frame(select_window_layer);
-	
-	// Initialize the simple menu layer
-	key_menu_layer = simple_menu_layer_create(bounds, select_window, key_menu_sections, 1, NULL);
-	
-	// Add it to the window for display
-	layer_add_child(select_window_layer, simple_menu_layer_get_layer(key_menu_layer));
+	select_menu_layer = menu_layer_create(bounds);
+	#ifdef PBL_COLOR
+		menu_layer_set_normal_colors(select_menu_layer, bg_color, fg_color);
+	#endif
+	menu_layer_set_click_config_onto_window(select_menu_layer, window);
+	menu_layer_set_callbacks(select_menu_layer, NULL, (MenuLayerCallbacks) {
+		.get_num_rows = (MenuLayerGetNumberOfRowsInSectionsCallback)select_menu_get_num_rows_callback,
+		.draw_row = (MenuLayerDrawRowCallback)select_menu_draw_row_callback,
+		.get_cell_height = (MenuLayerGetCellHeightCallback)select_menu_get_cell_height_callback,
+		.select_click = (MenuLayerSelectCallback)select_menu_select_callback,
+		.draw_header = (MenuLayerDrawHeaderCallback)select_menu_draw_header_callback,
+		.get_header_height = (MenuLayerGetHeaderHeightCallback)select_menu_get_header_height_callback,
+		.get_num_sections = (MenuLayerGetNumberOfSectionsCallback)select_menu_get_num_sections_callback,
+	});
+	layer_add_child(window_layer, menu_layer_get_layer(select_menu_layer));
 }
 
 void select_window_unload(Window *window) {
-	simple_menu_layer_destroy(key_menu_layer);
+	menu_layer_destroy(select_menu_layer);
 	window_destroy(select_window);
 }
 
@@ -672,12 +711,6 @@ void out_sent_handler(DictionaryIterator *sent, void *context) {
 	
 	if (DEBUG)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Outgoing Message Delivered");
-		
-	if (requesting_code > 0) {
-		if (DEBUG)
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: REQUESTING ANOTHER!");
-		request_key(requesting_code++);
-	}
 }
 
 void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, void *context) {

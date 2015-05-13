@@ -12,7 +12,7 @@ var timezone_offset = 0;
 var idle_timeout = 0;
 var message_send_retries = 0;
 var msg_data;
-var debug = false;
+var debug = true;
 
 function checkKeyStringIsValid(key) {
 	if (debug)
