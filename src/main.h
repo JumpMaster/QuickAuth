@@ -67,10 +67,12 @@ enum {
 
 extern GColor bg_color;
 extern GColor fg_color;
+extern unsigned int watch_otp_count;
+extern char otp_labels[MAX_OTP][MAX_LABEL_LENGTH];
+extern char otp_keys[MAX_OTP][MAX_KEY_LENGTH];
 
 void set_default_key(int key_id);
 void request_delete(int key_id);
-void close_select_window();
 void resetIdleTime();
 
 // define stubs

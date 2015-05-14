@@ -21,7 +21,7 @@
     "resources": {
         "media": [
             {
-                "file": "images/Padlock.png",
+                "file": "images/Padlock_aplite.png",
                 "name": "IMAGE_PADLOCK",
                 "type": "png"
             },

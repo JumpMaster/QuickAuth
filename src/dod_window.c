@@ -1,14 +1,16 @@
 #include "pebble.h"
 #include "main.h"
+#include "select_window.h"
 #include "dod_window.h"
 
 
-	static Window *dod_main_window;
+static Window *dod_main_window;
 static TextLayer *dod_label_layer;
 static BitmapLayer *dod_icon_layer;
 static ActionBarLayer *dod_action_bar_layer;
 
 static GBitmap *dod_icon_bitmap, *dod_fav_bitmap, *dod_del_bitmap;
+
 static int s_key_id;
 
 void dod_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -39,15 +41,27 @@ static void window_load(Window *window) {
 
 	dod_icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_PADLOCK);
 	GRect bitmap_bounds = gbitmap_get_bounds(dod_icon_bitmap);
-
 	dod_icon_layer = bitmap_layer_create(GRect((bounds.size.w / 2) - (bitmap_bounds.size.w / 2) - (ACTION_BAR_WIDTH / 2), 15, bitmap_bounds.size.w, bitmap_bounds.size.h));
+	
+	
 	bitmap_layer_set_bitmap(dod_icon_layer, dod_icon_bitmap);
-	bitmap_layer_set_compositing_mode(dod_icon_layer, GCompOpSet);
+	#ifdef PBL_PLATFORM_APLITE
+		bitmap_layer_set_compositing_mode(dod_icon_layer, GCompOpAssign);
+	#elif PBL_PLATFORM_BASALT
+		bitmap_layer_set_compositing_mode(dod_icon_layer, GCompOpSet);
+	#endif
+	
 	layer_add_child(window_layer, bitmap_layer_get_layer(dod_icon_layer));
 
 	dod_label_layer = text_layer_create(GRect(10, 15 + bitmap_bounds.size.h + 5, 124 - ACTION_BAR_WIDTH, bounds.size.h - (10 + bitmap_bounds.size.h + 15)));
 	text_layer_set_text(dod_label_layer, DIALOG_CHOICE_WINDOW_MESSAGE);
-	text_layer_set_text_color(dod_label_layer, fg_color);
+	
+	#ifdef PBL_COLOR
+		text_layer_set_text_color(dod_label_layer, fg_color);
+	#else
+		text_layer_set_text_color(dod_label_layer, GColorBlack);
+	#endif
+	
 	text_layer_set_background_color(dod_label_layer, GColorClear);
 	text_layer_set_text_alignment(dod_label_layer, GTextAlignmentCenter);
 	text_layer_set_font(dod_label_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
@@ -81,7 +95,15 @@ void dod_window_push(int key_id) {
 		s_key_id = key_id;
 		dod_main_window = window_create();
 
-		window_set_background_color(dod_main_window, bg_color);
+		#ifdef PBL_SDK_2
+			window_set_fullscreen(dod_main_window, true);
+		#endif
+		
+		#ifdef PBL_COLOR
+			window_set_background_color(dod_main_window, bg_color);
+		#else
+			window_set_background_color(dod_main_window, GColorWhite);
+		#endif
 
 		window_set_window_handlers(dod_main_window, (WindowHandlers) {
 			.load = window_load,
