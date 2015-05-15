@@ -2,7 +2,7 @@ var MAX_OTP_COUNT = 16;
 var MAX_LABEL_LENGTH = 20;
 var MAX_KEY_LENGTH = 64;
 var MAX_MESSAGE_RETRIES = 5;
-var APP_VERSION = 20;
+var APP_VERSION = 21;
 
 var otp_count = 0;
 var aplite_theme = -1;
@@ -12,7 +12,7 @@ var timezone_offset = 0;
 var idle_timeout = 0;
 var message_send_retries = 0;
 var msg_data;
-var debug = true;
+var debug = false;
 
 function checkKeyStringIsValid(key) {
 	if (debug)

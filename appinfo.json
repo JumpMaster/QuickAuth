@@ -15,7 +15,7 @@
     "capabilities": [
         "configurable"
     ],
-    "companyName": "JumpMaster",
+    "companyName": "Kevin Cooper",
     "longName": "PebbleAuth",
     "projectType": "native",
     "resources": {
@@ -87,7 +87,7 @@
         "basalt"
     ],
     "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
-    "versionLabel": "2.0",
+    "versionLabel": "2.1",
     "watchapp": {
         "watchface": false
     }

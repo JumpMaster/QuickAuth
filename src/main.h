@@ -23,8 +23,8 @@ typedef struct {
 #define MAX_LABEL_LENGTH 21 // 20 + termination
 #define MAX_KEY_LENGTH 65 // 64 + termination
 #define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
-#define APP_VERSION 20
-#define DEBUG true
+#define APP_VERSION 21
+#define DEBUG false
 	
 #define SELECT_WINDOW_CELL_HEIGHT 30
 
@@ -79,7 +79,6 @@ void resetIdleTime();
 void window_config_provider(Window *window);
 void request_key(int code_id);
 void set_fonts();
-//static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed);
 void start_refreshing();
 void finish_refreshing();
 void animation_control();
