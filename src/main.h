@@ -1,6 +1,6 @@
 //
 // Copyright 2015
-// PebbleAuth for the Pebble Smartwatch
+// PebbAuth for the Pebble Smartwatch
 // Author: Kevin Cooper
 // https://github.com/JumpMaster/PebbleAuth
 //
@@ -23,7 +23,7 @@ typedef struct {
 #define MAX_LABEL_LENGTH 21 // 20 + termination
 #define MAX_KEY_LENGTH 65 // 64 + termination
 #define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
-#define APP_VERSION 21
+#define APP_VERSION 22
 #define DEBUG false
 	
 #define SELECT_WINDOW_CELL_HEIGHT 30

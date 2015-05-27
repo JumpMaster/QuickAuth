@@ -2,7 +2,7 @@ var MAX_OTP_COUNT = 16;
 var MAX_LABEL_LENGTH = 20;
 var MAX_KEY_LENGTH = 64;
 var MAX_MESSAGE_RETRIES = 5;
-var APP_VERSION = 21;
+var APP_VERSION = 22;
 
 var otp_count = 0;
 var aplite_theme = -1;

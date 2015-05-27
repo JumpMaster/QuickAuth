@@ -16,7 +16,7 @@
         "configurable"
     ],
     "companyName": "Kevin Cooper",
-    "longName": "PebbleAuth",
+    "longName": "PebbAuth",
     "projectType": "native",
     "resources": {
         "media": [
@@ -81,13 +81,13 @@
         ]
     },
     "sdkVersion": "3",
-    "shortName": "PebbleAuth",
+    "shortName": "PebbAuth",
     "targetPlatforms": [
         "aplite",
         "basalt"
     ],
     "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
-    "versionLabel": "2.1",
+    "versionLabel": "2.2",
     "watchapp": {
         "watchface": false
     }

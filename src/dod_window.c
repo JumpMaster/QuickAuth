@@ -1,3 +1,10 @@
+//
+// Copyright 2015
+// PebbAuth for the Pebble Smartwatch
+// Author: Kevin Cooper
+// https://github.com/JumpMaster/PebbleAuth
+//
+
 #include "pebble.h"
 #include "main.h"
 #include "select_window.h"
@@ -98,12 +105,13 @@ void dod_window_push(int key_id) {
 		#ifdef PBL_SDK_2
 			window_set_fullscreen(dod_main_window, true);
 		#endif
-		
-		#ifdef PBL_COLOR
-			window_set_background_color(dod_main_window, bg_color);
-		#else
-			window_set_background_color(dod_main_window, GColorWhite);
-		#endif
+			
+		window_set_background_color(dod_main_window, COLOR_FALLBACK(bg_color, GColorBlack));
+//		#ifdef PBL_COLOR
+//			window_set_background_color(dod_main_window, bg_color);
+//		#else
+//			window_set_background_color(dod_main_window, GColorWhite);
+//		#endif
 
 		window_set_window_handlers(dod_main_window, (WindowHandlers) {
 			.load = window_load,

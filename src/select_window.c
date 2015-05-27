@@ -1,6 +1,6 @@
 //
 // Copyright 2015
-// PebbleAuth for the Pebble Smartwatch
+// PebbAuth for the Pebble Smartwatch
 // Author: Kevin Cooper
 // https://github.com/JumpMaster/PebbleAuth
 //
