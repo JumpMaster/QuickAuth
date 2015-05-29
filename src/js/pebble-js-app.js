@@ -49,9 +49,15 @@ function getWatchVersion() {
 	
 	var watch_version = 1;
 
+		var watch_name;// = Pebble.getActiveWatchInfo().model;
+		
 	if(Pebble.getActiveWatchInfo) {
-		// Available for use!
-		var watch_name = Pebble.getActiveWatchInfo().model;
+		try {
+			watch_name = Pebble.getActiveWatchInfo().model;
+		} catch(err) {
+			watch_name = "pebble_time";
+			console.log("INFO: getActiveWatchInfo() error. Presuming Pebble Time");
+		}
 
 		if (watch_name.indexOf("pebble_time_steel") >= 0) {
 			watch_version = 4;

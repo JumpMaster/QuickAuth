@@ -106,7 +106,7 @@ void dod_window_push(int key_id) {
 			window_set_fullscreen(dod_main_window, true);
 		#endif
 			
-		window_set_background_color(dod_main_window, COLOR_FALLBACK(bg_color, GColorBlack));
+		window_set_background_color(dod_main_window, COLOR_FALLBACK(bg_color, GColorWhite));
 //		#ifdef PBL_COLOR
 //			window_set_background_color(dod_main_window, bg_color);
 //		#else

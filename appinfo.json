@@ -16,7 +16,7 @@
         "configurable"
     ],
     "companyName": "Kevin Cooper",
-    "longName": "PebbAuth",
+    "longName": "QuickAuth",
     "projectType": "native",
     "resources": {
         "media": [
@@ -81,7 +81,7 @@
         ]
     },
     "sdkVersion": "3",
-    "shortName": "PebbAuth",
+    "shortName": "QuickAuth",
     "targetPlatforms": [
         "aplite",
         "basalt"
