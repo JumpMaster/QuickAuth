@@ -21,12 +21,10 @@ typedef struct {
 
 #define MAX_OTP 16
 #define MAX_LABEL_LENGTH 21 // 20 + termination
-#define MAX_KEY_LENGTH 65 // 64 + termination
+#define MAX_KEY_LENGTH 129 // 128 + termination
 #define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
-#define APP_VERSION 22
+#define APP_VERSION 23
 #define DEBUG false
-	
-#define SELECT_WINDOW_CELL_HEIGHT 30
 
 #define MyTupletCString(_key, _cstring) \
 ((const Tuplet) { .type = TUPLE_CSTRING, .key = _key, .cstring = { .data = _cstring, .length = strlen(_cstring) + 1 }})
@@ -39,6 +37,7 @@ enum {
 	PS_FONT_STYLE,
 	PS_IDLE_TIMEOUT,
 	PS_BASALT_COLORS,
+	PS_WINDOW_LAYOUT,
 	PS_SECRET = 0x40 // Needs 16 spaces, should always be last
 };
 
@@ -54,9 +53,11 @@ enum {
 	JS_FONT_STYLE,
 	JS_DELETE_ALL,
 	JS_IDLE_TIMEOUT,
-	JS_BASALT_COLORS
+	JS_BASALT_COLORS,
+	JS_WINDOW_LAYOUT
 };
 
+// Animation Directions
 enum { 
 	UP,
 	DOWN,
@@ -64,23 +65,32 @@ enum {
 	RIGHT
 };
 
-
 extern GColor bg_color;
 extern GColor fg_color;
-extern unsigned int watch_otp_count;
+extern AppFont font_pin;
+extern AppFont font_label;
+
 extern char otp_labels[MAX_OTP][MAX_LABEL_LENGTH];
 extern char otp_keys[MAX_OTP][MAX_KEY_LENGTH];
+
+extern unsigned int font_style;
+extern unsigned int watch_otp_count;
+extern unsigned int otp_selected;
+extern unsigned int otp_update_tick;
+extern unsigned int otp_updated_at_tick;
+extern int timezone_offset;
+
+extern bool loading_complete;
+extern bool refresh_required;
+extern bool fonts_changed;
+extern bool colors_changed;
 
 void set_default_key(int key_id);
 void request_delete(int key_id);
 void resetIdleTime();
-
-// define stubs
-void window_config_provider(Window *window);
-void request_key(int code_id);
-void set_fonts();
-void start_refreshing();
-void finish_refreshing();
-void animation_control();
-void set_display_colors();
-void apply_display_colors();
+void switch_window_layout();
+void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *finish, int duration, AnimationStoppedHandler callback);
+void add_countdown_layer(struct Layer *window_layer);
+void set_countdown_layer_color(GColor color);
+void show_countdown_layer();
+void hide_countdown_layer();

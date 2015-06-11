@@ -31,6 +31,7 @@ void dod_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context
 
 void dod_actionbar_down_click_handler(ClickRecognizerRef recognizer, void *context) {
 	resetIdleTime();
+	
 	request_delete(s_key_id);
 
 	close_select_window();
@@ -107,11 +108,6 @@ void dod_window_push(int key_id) {
 		#endif
 			
 		window_set_background_color(dod_main_window, COLOR_FALLBACK(bg_color, GColorWhite));
-//		#ifdef PBL_COLOR
-//			window_set_background_color(dod_main_window, bg_color);
-//		#else
-//			window_set_background_color(dod_main_window, GColorWhite);
-//		#endif
 
 		window_set_window_handlers(dod_main_window, (WindowHandlers) {
 			.load = window_load,

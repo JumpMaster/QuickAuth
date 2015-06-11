@@ -1,8 +1,8 @@
 var MAX_OTP_COUNT = 16;
 var MAX_LABEL_LENGTH = 20;
-var MAX_KEY_LENGTH = 64;
+var MAX_KEY_LENGTH = 128;
 var MAX_MESSAGE_RETRIES = 5;
-var APP_VERSION = 22;
+var APP_VERSION = 23;
 
 var otp_count = 0;
 var aplite_theme = -1;
@@ -10,6 +10,7 @@ var basalt_colors = -1;
 var font_style = -1;
 var timezone_offset = 0;
 var idle_timeout = 0;
+var window_layout = -1;
 var message_send_retries = 0;
 var msg_data;
 var debug = false;
@@ -87,13 +88,15 @@ function loadLocalVariables() {
 	aplite_theme = parseInt(getItem("theme"));
 	basalt_colors = getItem("basalt_colors");
 	font_style = parseInt(getItem("font_style"));
-	idle_timeout = getItem("idle_timeout");
+	idle_timeout = parseInt(getItem("idle_timeout"));
 	timezone_offset = new Date().getTimezoneOffset();
+	window_layout = parseInt(getItem("window_layout"));
 	
 	aplite_theme = !aplite_theme ? 0 : aplite_theme;
 	basalt_colors = !basalt_colors ? "0000FFFFFFFF" : basalt_colors;
 	font_style = !font_style ? 0 : font_style;
-	idle_timeout = idle_timeout === null ? 300 : parseInt(idle_timeout);
+	idle_timeout = !idle_timeout ? 300 : idle_timeout;
+	window_layout = !window_layout ? 0 : window_layout;
 }
 
 function getItem(reference) {
@@ -141,12 +144,13 @@ Pebble.addEventListener("ready",
 								
 								// Send timezone, keycount, and theme to watch
 								sendAppMessage({
-									"key_count":otp_count, 
+									"key_count":otp_count,
 									"theme":aplite_theme,
 									"basalt_colors":basalt_colors,
 									"timezone":timezone_offset,
 									"font_style":font_style,
-									"idle_timeout":idle_timeout
+									"idle_timeout":idle_timeout,
+									"window_layout":window_layout
 									});
 
 								if (debug) {
@@ -155,8 +159,8 @@ Pebble.addEventListener("ready",
 									console.log("INFO: basalt_colors="+basalt_colors);
 									console.log("INFO: timezoneOffset="+timezone_offset);
 									console.log("INFO: font_style="+font_style);
-									console.log("INFO: idle_timeout="+idle_timeout);
 									console.log("INFO: getWatchVersion()="+getWatchVersion());
+									console.log("INFO: window_layout="+window_layout);
 								}
 
 								// ####### CLEAN APP ##############
@@ -168,6 +172,7 @@ Pebble.addEventListener("ready",
 								//localStorage.removeItem("basalt_colors");
 								//localStorage.removeItem("font_style");
 								//localStorage.removeItem("idle_timeout");
+								//localStorage.removeItem("window_layout");
 								// ####### /CLEAN APP ##############*/
 							}
 						);
@@ -223,13 +228,14 @@ Pebble.addEventListener("appmessage",
 Pebble.addEventListener('showConfiguration', function(e) {
 	sendAppMessage({"idle_timeout":-1});
 
-		var url = 'http://oncloudvirtual.com/pebble/pebbleauth/v'+
+		var url = 'http://oncloudvirtual.com/pebble/quickauth/v'+
 		APP_VERSION+'/'+
 		'?otp_count='+otp_count+
 		'&theme='+aplite_theme+
 		'&basalt_colors='+basalt_colors+
 		'&font_style='+font_style+
 		'&idle_timeout='+idle_timeout+
+		'&window_layout='+window_layout+
 		'&watch_version='+getWatchVersion();
 
 	if (debug)
@@ -256,6 +262,7 @@ Pebble.addEventListener("webviewclosed",
 									localStorage.removeItem("basalt_colors");
 									localStorage.removeItem("font_style");
 									localStorage.removeItem("idle_timeout");
+									localStorage.removeItem("window_layout");
 									sendAppMessage(configuration);
 									return;
 								}
@@ -285,6 +292,15 @@ Pebble.addEventListener("webviewclosed",
 									font_style = configuration.font_style;
 									setItem("font_style",font_style);
 									config.font_style = font_style;
+								}
+								
+								if(!isNaN(configuration.window_layout) && configuration.window_layout != window_layout) {
+									if (debug)
+										console.log("INFO: Window layout changed:"+configuration.window_layout);
+
+									window_layout = configuration.window_layout;
+									setItem("window_layout",window_layout);
+									config.window_layout = window_layout;
 								}
 								
 								if(!isNaN(configuration.idle_timeout) && configuration.idle_timeout != idle_timeout) {

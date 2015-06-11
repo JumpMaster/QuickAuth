@@ -6,6 +6,7 @@
 //
 
 #include "pebble.h"
+#include "select_window.h"
 #include "main.h"
 #include "dod_window.h"
 
@@ -22,7 +23,16 @@ static uint16_t select_menu_get_num_rows_callback(MenuLayer *menu_layer, uint16_
 }
 
 static void select_menu_draw_row_callback(GContext *ctx, Layer *cell_layer, MenuIndex *cell_index, void *context) {
-		menu_cell_basic_draw(ctx, cell_layer, otp_labels[cell_index->row], NULL, NULL);
+	#ifdef PBL_COLOR
+	if (menu_cell_layer_is_highlighted(cell_layer)) {
+		graphics_context_set_fill_color(ctx, fg_color);
+		graphics_context_set_text_color(ctx, bg_color);
+		GRect bounds = layer_get_bounds(cell_layer);
+		graphics_fill_rect(ctx, bounds, 0, 0);
+	}
+	#endif
+		
+	menu_cell_basic_draw(ctx, cell_layer, otp_labels[cell_index->row], NULL, NULL);
 }
 
 static int16_t select_menu_get_cell_height_callback(struct MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
@@ -46,6 +56,10 @@ static uint16_t select_menu_get_num_sections_callback(struct MenuLayer *menu_lay
 	return 1;
 }
 
+static void select_menu_selection_changed_callback(struct MenuLayer *menu_layer, MenuIndex new_index, MenuIndex old_index, void *callback_context) {
+	resetIdleTime();
+}
+
 static void select_window_load(Window *window) {
 	Layer *window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(window_layer);
@@ -65,8 +79,9 @@ static void select_window_load(Window *window) {
 		.draw_header = (MenuLayerDrawHeaderCallback)select_menu_draw_header_callback,
 		.get_header_height = (MenuLayerGetHeaderHeightCallback)select_menu_get_header_height_callback,
 		.get_num_sections = (MenuLayerGetNumberOfSectionsCallback)select_menu_get_num_sections_callback,
+		.selection_changed = (MenuLayerSelectionChangedCallback)select_menu_selection_changed_callback,
 	});
-	menu_layer_set_selected_index(select_menu_layer, MenuIndex(0, selected_index), MenuRowAlignCenter, false);
+	menu_layer_set_selected_index(select_menu_layer, MenuIndex(0, otp_selected), MenuRowAlignCenter, false);
 	layer_add_child(window_layer, menu_layer_get_layer(select_menu_layer));
 }
 
@@ -88,5 +103,5 @@ void push_select_window(int key_id) {
 		.unload = select_window_unload,
 	});
 
-	window_stack_push(select_window, true /* Animated */);	
+	window_stack_push(select_window, true /* Animated */);
 }
