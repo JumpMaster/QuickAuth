@@ -159,8 +159,9 @@ Pebble.addEventListener("ready",
 									console.log("INFO: basalt_colors="+basalt_colors);
 									console.log("INFO: timezoneOffset="+timezone_offset);
 									console.log("INFO: font_style="+font_style);
-									console.log("INFO: getWatchVersion()="+getWatchVersion());
+									console.log("INFO: idle_timeout="+idle_timeout);
 									console.log("INFO: window_layout="+window_layout);
+									console.log("INFO: getWatchVersion()="+getWatchVersion());
 								}
 
 								// ####### CLEAN APP ##############
