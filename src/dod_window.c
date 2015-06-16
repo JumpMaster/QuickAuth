@@ -23,7 +23,7 @@ static int s_key_id;
 void dod_actionbar_up_click_handler(ClickRecognizerRef recognizer, void *context) {
 	resetIdleTime();
 
-	set_default_key(s_key_id);
+	set_default_key(s_key_id, true);
 
 	close_select_window();
 	window_stack_pop(true);

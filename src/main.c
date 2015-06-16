@@ -94,6 +94,48 @@ void switch_window_layout(void) {
 	update_window_layout();
 }
 
+void write_key(char label[MAX_LABEL_LENGTH], char key[MAX_KEY_LENGTH], unsigned int location) {
+	char combined_key[MAX_COMBINED_LENGTH];
+	snprintf(combined_key, sizeof(combined_key), "%s:%s",label,key);
+	persist_write_string(PS_SECRET+location, combined_key);
+}
+
+void move_key_position(unsigned int key_position, unsigned int new_position) {
+	char label_buffer[MAX_LABEL_LENGTH];
+	char key_buffer[MAX_KEY_LENGTH];
+	
+	strcpy(label_buffer, otp_labels[key_position]);
+	strcpy(key_buffer, otp_keys[key_position]);
+	
+	if (key_position > new_position) {	
+		for (unsigned int i = key_position; i > new_position; i--) {
+			strcpy(otp_labels[i], otp_labels[i-1]);
+			strcpy(otp_keys[i], otp_keys[i-1]);
+			write_key(otp_labels[i], otp_keys[i], i);
+		}
+	} else if (new_position > key_position) {
+		for (unsigned int i = key_position; i < new_position; i++) {
+			strcpy(otp_labels[i], otp_labels[i+1]);
+			strcpy(otp_keys[i], otp_keys[i+1]);
+			write_key(otp_labels[i], otp_keys[i], i);
+		}
+	}
+
+	strcpy(otp_labels[new_position], label_buffer);
+	strcpy(otp_keys[new_position], key_buffer);
+	write_key(otp_labels[new_position], otp_keys[new_position], new_position);
+	
+	if (otp_default == key_position)
+		set_default_key(new_position, false);
+	else if (otp_default <= new_position && otp_default >= key_position)
+		set_default_key(otp_default-1, false);
+	else if (otp_default >= new_position && otp_default <= key_position)
+		set_default_key(otp_default+1, false);
+	
+	otp_selected = new_position;
+	refresh_screen();
+}
+
 void on_animation_stopped(Animation *anim, bool finished, void *context) {
 	//Free the memory used by the Animation
 	property_animation_destroy((PropertyAnimation*) anim);
@@ -129,13 +171,14 @@ void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *fini
 }
 
 
-void set_default_key(int key_id) {
+void set_default_key(int key_id, bool force_refresh) {
 	otp_default = key_id;
 	persist_write_int(PS_DEFAULT_KEY, otp_default);
 	
 	if (otp_selected != otp_default) {
 		otp_selected = otp_default;
-		refresh_screen();
+		if (force_refresh)
+			refresh_screen();
 	}
 }
 
@@ -414,16 +457,10 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 		}
 		
 		if(key_found < MAX_OTP) {
-			char buff[MAX_COMBINED_LENGTH];
 			for (unsigned int i = key_found; i < watch_otp_count; i++) {
 				strcpy(otp_keys[i], otp_keys[i+1]);
 				strcpy(otp_labels[i], otp_labels[i+1]);
-				
-				buff[0] = '\0';
-				strcat(buff,otp_labels[i]);
-				strcat(buff,":");
-				strcat(buff,otp_keys[i]);
-				persist_write_string(PS_SECRET+i, buff);
+				write_key(otp_labels[i], otp_keys[i], i);
 			}
 			watch_otp_count--;
 			persist_delete(PS_SECRET+watch_otp_count);
@@ -640,30 +677,29 @@ void main_animate_second_counter(int seconds, bool off_screen) {
 	// update countdown layer
 	GRect start = layer_get_frame(text_layer_get_layer(countdown_layer));
 	GRect finish = countdown_rect;
-
 	finish.size.w = ((float)4.8) * reverse_seconds; // 4.8 == Pebble screen width / 30
 
 	#ifdef PBL_COLOR
 		switch(reverse_seconds)
 		{
-			case 6 :
-				text_layer_set_background_color(countdown_layer, GColorRed);
-				break;
-			case 5 :
-				text_layer_set_background_color(countdown_layer, fg_color);
-				break;
-			case 4 :
-				text_layer_set_background_color(countdown_layer, GColorRed);
-				break;
-			case 3 :
-				text_layer_set_background_color(countdown_layer, fg_color);
-				break;
-			case 2 :
-				text_layer_set_background_color(countdown_layer, GColorRed);
-				break;
-			case 1 :
-				text_layer_set_background_color(countdown_layer, fg_color);
-				break;
+		case 6 :
+			text_layer_set_background_color(countdown_layer, GColorRed);
+			break;
+		case 5 :
+			text_layer_set_background_color(countdown_layer, fg_color);
+			break;
+		case 4 :
+			text_layer_set_background_color(countdown_layer, GColorRed);
+			break;
+		case 3 :
+			text_layer_set_background_color(countdown_layer, fg_color);
+			break;
+		case 2 :
+			text_layer_set_background_color(countdown_layer, GColorRed);
+			break;
+		case 1 :
+			text_layer_set_background_color(countdown_layer, fg_color);
+			break;
 		}
 	#endif
 

@@ -22,6 +22,26 @@
     "resources": {
         "media": [
             {
+                "file": "images/SimpleFadeBottomAplite.png",
+                "name": "IMAGE_SIMPLE_FADE_BOTTOM",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/SimpleFadeTopAplite.png",
+                "name": "IMAGE_SIMPLE_FADE_TOP",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/SimpleFadeBottom.png",
+                "name": "IMAGE_SIMPLE_FADE_BOTTOM",
+                "type": "png"
+            },
+            {
+                "file": "images/SimpleFadeTop.png",
+                "name": "IMAGE_SIMPLE_FADE_TOP",
+                "type": "png"
+            },
+            {
                 "file": "fonts/DS-DIGIB.TTF",
                 "name": "FONT_DIGITAL_30",
                 "type": "font"
@@ -88,7 +108,7 @@
         "basalt"
     ],
     "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
-    "versionLabel": "2.3",
+    "versionLabel": "2.4",
     "watchapp": {
         "watchface": false
     }

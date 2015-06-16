@@ -93,6 +93,7 @@ void animate_code_on() {
 		strcpy(pin_text, generateCode(otp_keys[otp_selected], timezone_offset));
 	else
 		strcpy(pin_text, "123456");
+
 	otp_updated_at_tick = otp_update_tick;
 	
 	GRect start = text_pin_rect;
