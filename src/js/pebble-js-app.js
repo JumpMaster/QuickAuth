@@ -198,6 +198,9 @@ function confirmDelete(secret) {
 				localStorage.removeItem('secret_pair'+i);
 		}
 	}
+	if (blnFound)
+		otp_count--;
+	
 	sendAppMessage({"delete_key":secret});
 }
 
@@ -318,10 +321,9 @@ Pebble.addEventListener("webviewclosed",
 								if(configuration.label && configuration.secret) {
 									
 									var secret = configuration.secret
-										.replace(/0/g,"O")
-										.replace(/1/g, "I")
-										.replace(/\+/g, '')
-										.replace(/\s/g, '')
+										.replace(/0/g,"O") // replace 0 with O
+										.replace(/1/g, "I") // replace 1 with I
+										.replace(/\W/g, '') // replace non-alphanumeric characters
 										.toUpperCase()
 										.substring(0, MAX_KEY_LENGTH);
 									var label = configuration.label

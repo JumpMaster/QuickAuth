@@ -280,7 +280,7 @@ void set_fonts(void) {
 			font_pin.font = fonts_get_system_font(FONT_KEY_BITHAM_34_MEDIUM_NUMBERS);
 			font_pin.isCustom = false;
 			text_label_rect.origin.y = 55;
-			text_label_rect.size.h = 40;
+			text_label_rect.size.h = 30;
 			text_pin_rect.size.h = 50;
 			text_pin_rect.origin.y = 76;
 			break;
@@ -311,7 +311,7 @@ void set_fonts(void) {
 			font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BITWISE_32));
 			font_pin.isCustom = true;
 			text_label_rect.origin.y = 50;
-			text_label_rect.size.h = 40;
+			text_label_rect.size.h = 36;
 			text_pin_rect.size.h = 50;
 			text_pin_rect.origin.y = 80;
 			break;
