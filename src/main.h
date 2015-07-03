@@ -6,7 +6,6 @@
 //
 
 #pragma once
-
 #include "pebble.h"
 	
 typedef struct {
@@ -14,16 +13,11 @@ typedef struct {
 	bool isCustom;
 } AppFont;
 
-#define ASCII_0_VALU 48
-#define ASCII_9_VALU 57
-#define ASCII_A_VALU 65
-#define ASCII_F_VALU 70
-
 #define MAX_OTP 16
 #define MAX_LABEL_LENGTH 21 // 20 + termination
 #define MAX_KEY_LENGTH 129 // 128 + termination
 #define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
-#define APP_VERSION 24
+#define APP_VERSION 25
 #define DEBUG false
 
 #define MyTupletCString(_key, _cstring) \

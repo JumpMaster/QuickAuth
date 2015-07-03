@@ -16,8 +16,7 @@
 // limitations under the License.
 
 #pragma once
-
-#include <stdint.h>
+#include "stdint.h"
 
 #define SHA1_BLOCKSIZE     64
 #define SHA1_DIGEST_LENGTH 20

@@ -9,7 +9,7 @@
 #include "main.h"
 #include "single_code_window.h"
 #include "multi_code_window.h"
-#include <ctype.h>
+#include "ctype.h"
 
 // Colors
 GColor bg_color;
@@ -677,29 +677,15 @@ void main_animate_second_counter(int seconds, bool off_screen) {
 	// update countdown layer
 	GRect start = layer_get_frame(text_layer_get_layer(countdown_layer));
 	GRect finish = countdown_rect;
-	finish.size.w = ((float)4.8) * reverse_seconds; // 4.8 == Pebble screen width / 30
+	// finish.size.w = ((float)4.8) * reverse_seconds; // 4.8 == Pebble screen width / 30
+	finish.size.w = (24 * reverse_seconds) / 5; // Same result as the above line but it avoids floats so is Pebble friendly.
 
 	#ifdef PBL_COLOR
-		switch(reverse_seconds)
-		{
-		case 6 :
-			text_layer_set_background_color(countdown_layer, GColorRed);
-			break;
-		case 5 :
-			text_layer_set_background_color(countdown_layer, fg_color);
-			break;
-		case 4 :
-			text_layer_set_background_color(countdown_layer, GColorRed);
-			break;
-		case 3 :
-			text_layer_set_background_color(countdown_layer, fg_color);
-			break;
-		case 2 :
-			text_layer_set_background_color(countdown_layer, GColorRed);
-			break;
-		case 1 :
-			text_layer_set_background_color(countdown_layer, fg_color);
-			break;
+		if (reverse_seconds <= 6) {
+			if (reverse_seconds % 2 == 0)
+				text_layer_set_background_color(countdown_layer, GColorRed);
+			else
+				text_layer_set_background_color(countdown_layer, fg_color);
 		}
 	#endif
 
@@ -762,12 +748,16 @@ void handle_init(void) {
 void handle_deinit(void) {
 	if (DEBUG)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: EXITING");
+
 	tick_timer_service_unsubscribe();
+	animation_unschedule_all();
 	text_layer_destroy(countdown_layer);
+	
 	if (window_layout == 1)
 		multi_code_window_remove();
 	else
 		single_code_window_remove();
+	
 	if (font_label.isCustom)
 		fonts_unload_custom_font(font_label.font);
 	if (font_pin.isCustom)

@@ -69,9 +69,6 @@ static void multi_code_menu_selection_changed_callback(struct MenuLayer *menu_la
 	resetIdleTime();
 }
 
-AppFont font_pin;
-AppFont font_label;
-
 void multi_code_set_fonts(void) {
 	fonts_changed = false;
 	

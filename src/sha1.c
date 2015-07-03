@@ -40,7 +40,7 @@
  *
  *****************************************************************************
 */
-#include <string.h>
+#include "string.h"
 #include "sha1.h"
 
 /* SHA f()-functions */

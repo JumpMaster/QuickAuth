@@ -2,7 +2,7 @@ var MAX_OTP_COUNT = 16;
 var MAX_LABEL_LENGTH = 20;
 var MAX_KEY_LENGTH = 128;
 var MAX_MESSAGE_RETRIES = 5;
-var APP_VERSION = 24;
+var APP_VERSION = 25;
 
 var otp_count = 0;
 var aplite_theme = -1;
@@ -321,9 +321,10 @@ Pebble.addEventListener("webviewclosed",
 								if(configuration.label && configuration.secret) {
 									
 									var secret = configuration.secret
-										.replace(/0/g,"O") // replace 0 with O
-										.replace(/1/g, "I") // replace 1 with I
-										.replace(/\W/g, '') // replace non-alphanumeric characters
+										.replace(/0/g,"O")	// replace 0 with O
+										.replace(/1/g, "I")	// replace 1 with I
+										.replace(/\W/g, '')	// replace non-alphanumeric characters
+										.replace(/_/g, '')	// replace underscore
 										.toUpperCase()
 										.substring(0, MAX_KEY_LENGTH);
 									var label = configuration.label

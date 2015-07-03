@@ -27,7 +27,6 @@
 #include "google-authenticator.h"
 
 char *generateCode(const char *key, int timezone_offset) {
-	//long tm = time(NULL)/30;
 	
 	#ifdef PBL_SDK_2
 		long tm = (time(NULL) + (timezone_offset*60))/30;
@@ -48,17 +47,17 @@ char *generateCode(const char *key, int timezone_offset) {
 	// Sanity check, that our secret will fixed into a reasonably-sized static
 	// array.
 	if (secretLen < 0 || secretLen > 100) {
-		return "FAILED";
+		return "000000";
 	}
 	
 	// Decode secret from Base32 to a binary representation, and check that we
 	// have at least one byte's worth of secret data.
 	uint8_t secret[100];
 	if ((secretLen = base32_decode((const uint8_t *)key, secret, secretLen))<1) {
-		return "FAILED";
+		return "000000";
 	}
 
-	// Compute the HMAC_SHA1 of the secrete and the challenge.
+	// Compute the HMAC_SHA1 of the secret and the challenge.
 	uint8_t hash[SHA1_DIGEST_LENGTH];
 	hmac_sha1(secret, secretLen, challenge, 8, hash, SHA1_DIGEST_LENGTH);
 	
