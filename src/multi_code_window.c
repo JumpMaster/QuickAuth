@@ -3,6 +3,7 @@
 #include "multi_code_window.h"
 #include "google-authenticator.h"
 #include "select_window.h"
+#include "graphics.h"
 
 static GRect display_bounds;
 static MenuLayer *multi_code_menu_layer;
@@ -37,7 +38,7 @@ static void multi_code_menu_draw_row_callback(GContext *ctx, Layer *cell_layer, 
 }
 
 static int16_t multi_code_menu_get_cell_height_callback(struct MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
-	return MULTI_CODE_CELL_HEIGHT;
+	return multi_code_cell_height;
 }
 
 static void multi_code_menu_select_callback(struct MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
@@ -104,7 +105,7 @@ void multi_code_set_fonts(void) {
 
 void multi_code_apply_display_colors() {
 	window_set_background_color(multi_code_main_window, bg_color);
-	set_countdown_layer_color(fg_color);
+  set_countdown_layer_color(fg_color);
 	#ifdef PBL_COLOR
 		menu_layer_set_normal_colors(multi_code_menu_layer, bg_color, fg_color);
 	#endif
@@ -144,7 +145,16 @@ static void multi_code_window_load(Window *window) {
 	scroll_layer_set_shadow_hidden(menu_layer_get_scroll_layer(multi_code_menu_layer), true);
 	layer_add_child(window_layer, menu_layer_get_layer(multi_code_menu_layer));
 	menu_layer_set_selected_index(multi_code_menu_layer, MenuIndex(0, otp_selected), MenuRowAlignCenter, false);
-	add_countdown_layer(window_layer);
+  
+  #if defined(PBL_ROUND)
+    menu_layer_set_center_focused(multi_code_menu_layer, true);
+  #endif
+	
+  Layer *countdown_layer = layer_create(display_bounds);
+  layer_add_child(window_layer, countdown_layer);
+	//add_countdown_layer(s_layer);
+  start_managing_countdown_layer(countdown_layer);
+  
 	show_countdown_layer();
 	multi_code_apply_display_colors();
 }

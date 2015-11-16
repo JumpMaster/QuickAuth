@@ -47,10 +47,11 @@ function getWatchVersion() {
 	// 3 = Pebble Time
 	// 3 = Pebble Basalt Emulator (currently Pebble Time)
 	// 4 = Pebble Time Steel
+  // 5 = Pebble Time Round
 	
 	var watch_version = 1;
 
-		var watch_name;// = Pebble.getActiveWatchInfo().model;
+	var watch_name;// = Pebble.getActiveWatchInfo().model;
 		
 	if(Pebble.getActiveWatchInfo) {
 		try {
@@ -60,7 +61,9 @@ function getWatchVersion() {
 			console.log("INFO: getActiveWatchInfo() error. Presuming Pebble Time");
 		}
 
-		if (watch_name.indexOf("pebble_time_steel") >= 0) {
+    if (watch_name.indexOf("chalk") >= 0) {
+      watch_version = 5;
+    } else if (watch_name.indexOf("pebble_time_steel") >= 0) {
 			watch_version = 4;
 		} else if (watch_name.indexOf("pebble_time") >= 0) {
 			watch_version = 3;
@@ -233,7 +236,7 @@ Pebble.addEventListener('showConfiguration', function(e) {
 	sendAppMessage({"idle_timeout":-1});
 
 		var url = 'http://oncloudvirtual.com/pebble/quickauth/v'+
-		APP_VERSION+'/'+
+		APP_VERSION+
 		'?otp_count='+otp_count+
 		'&theme='+aplite_theme+
 		'&basalt_colors='+basalt_colors+

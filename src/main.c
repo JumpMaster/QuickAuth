@@ -10,6 +10,7 @@
 #include "single_code_window.h"
 #include "multi_code_window.h"
 #include "ctype.h"
+#include "graphics.h"
 
 // Colors
 GColor bg_color;
@@ -24,7 +25,6 @@ bool fonts_changed;
 bool colors_changed;
 bool refresh_required;
 bool loading_complete;
-bool animate_countdown_layer;
 
 unsigned int js_message_retry_count = 0;
 unsigned int js_message_max_retry_count = 5;
@@ -45,9 +45,6 @@ unsigned int window_layout = 0;
 char otp_labels[MAX_OTP][MAX_LABEL_LENGTH];
 char otp_keys[MAX_OTP][MAX_KEY_LENGTH];
 
-static TextLayer *countdown_layer;
-static GRect countdown_rect;
-
 #ifdef PBL_COLOR
 	char basalt_colors[13];
 #else
@@ -57,7 +54,7 @@ static GRect countdown_rect;
 // Functions requiring early declaration
 void request_key(int code_id);
 void send_key(int requested_key);
-void main_animate_second_counter(int seconds, bool off_screen);
+void main_animate_second_counter(bool off_screen);
 	
 void resetIdleTime() {
 	idle_second_count = 0;
@@ -640,67 +637,6 @@ void load_persistent_data() {
 	otp_selected = otp_default;
 }
 
-void show_countdown_layer() {
-	animate_countdown_layer = true;
-}
-
-void hide_countdown_layer() {
-	animate_countdown_layer = false;
-	main_animate_second_counter(0, true);
-}
-
-void set_countdown_layer_color(GColor color) {
-	text_layer_set_background_color(countdown_layer, color);
-}
-
-void add_countdown_layer(Layer * window_layer) {
-	GRect display_bounds = layer_get_frame(window_layer);
-	countdown_rect = (GRect(0, display_bounds.size.h-10, display_bounds.size.w, 10));
-	GRect countdown_start = countdown_rect;
-	countdown_start.size.w = 0;
-	if (countdown_layer) {
-		if (layer_get_window(text_layer_get_layer(countdown_layer))) {
-			layer_remove_from_parent(text_layer_get_layer(countdown_layer));
-			layer_set_frame(text_layer_get_layer(countdown_layer), countdown_start);
-		}
-	} else {
-		countdown_layer = text_layer_create(countdown_start);
-	}
-	text_layer_set_background_color(countdown_layer, fg_color);
-	layer_add_child(window_layer, text_layer_get_layer(countdown_layer));
-}
-
-void main_animate_second_counter(int seconds, bool off_screen) {
-
-	int reverse_seconds = 30-(seconds%30);
-	
-	// update countdown layer
-	GRect start = layer_get_frame(text_layer_get_layer(countdown_layer));
-	GRect finish = countdown_rect;
-	// finish.size.w = ((float)4.8) * reverse_seconds; // 4.8 == Pebble screen width / 30
-	finish.size.w = (24 * reverse_seconds) / 5; // Same result as the above line but it avoids floats so is Pebble friendly.
-
-	#ifdef PBL_COLOR
-		if (reverse_seconds <= 6) {
-			if (reverse_seconds % 2 == 0)
-				text_layer_set_background_color(countdown_layer, GColorRed);
-			else
-				text_layer_set_background_color(countdown_layer, fg_color);
-		}
-	#endif
-
-	if (off_screen) {
-		finish.origin.y = 168; // Pebble screen height
-		finish.size.w = 0;
-		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, NULL);
-	} else {
-		if (reverse_seconds % 30 == 0)
-			animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, NULL);
-		else
-			animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, 900, NULL);
-	}
-}
-
 static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 	
 	if (idle_timeout > 0) {
@@ -715,9 +651,6 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 			idle_second_count += 1;
 	}
 	
-	if (animate_countdown_layer)
-		main_animate_second_counter(tick_time->tm_sec, false);
-	
 	if (window_layout == 1)
 		multi_code_window_second_tick(tick_time->tm_sec);
 	else
@@ -726,6 +659,7 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 
 void handle_init(void) {
 	load_persistent_data();
+  initialise_veriables();
 	set_display_colors();
 	tick_timer_service_subscribe(SECOND_UNIT, &handle_second_tick);
 	
@@ -750,8 +684,8 @@ void handle_deinit(void) {
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: EXITING");
 
 	tick_timer_service_unsubscribe();
+  stop_managing_countdown_layer();
 	animation_unschedule_all();
-	text_layer_destroy(countdown_layer);
 	
 	if (window_layout == 1)
 		multi_code_window_remove();

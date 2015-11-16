@@ -3,6 +3,7 @@
 #include "main.h"
 #include "select_window.h"
 #include "google-authenticator.h"
+#include "graphics.h"
 
 // Main Window
 static Window *single_code_main_window;
@@ -260,7 +261,7 @@ void window_config_provider(Window *window) {
 
 void apply_display_colors() {
 	window_set_background_color(single_code_main_window, bg_color);
-	set_countdown_layer_color(fg_color);
+  set_countdown_layer_color(fg_color);
 	text_layer_set_text_color(text_label_layer, fg_color);
 	text_layer_set_text_color(text_pin_layer, fg_color);
 }
@@ -279,30 +280,30 @@ void set_fonts(void) {
 			font_label.isCustom = false;
 			font_pin.font = fonts_get_system_font(FONT_KEY_BITHAM_34_MEDIUM_NUMBERS);
 			font_pin.isCustom = false;
-			text_label_rect.origin.y = 55;
-			text_label_rect.size.h = 30;
-			text_pin_rect.size.h = 50;
-			text_pin_rect.origin.y = 76;
+			text_label_rect.origin.y = single_text_label_rect.origin.y;
+			text_label_rect.size.h = single_text_label_rect.size.h - 6;
+			text_pin_rect.size.h = single_text_pin_rect.size.h;
+			text_pin_rect.origin.y = single_text_pin_rect.origin.y - 4;
 			break;
 		case 2 :
 			font_label.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DIGITAL_30));
 			font_label.isCustom = true;
 			font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DIGITAL_42));
 			font_pin.isCustom = true;
-			text_label_rect.origin.y = 52;
-			text_label_rect.size.h = 40;
-			text_pin_rect.size.h = 50;
-			text_pin_rect.origin.y = 74;
+			text_label_rect.origin.y = single_text_label_rect.origin.y + 2;
+			text_label_rect.size.h = single_text_label_rect.size.h + 4;
+			text_pin_rect.size.h = single_text_pin_rect.size.h;
+			text_pin_rect.origin.y = single_text_pin_rect.origin.y - 6;
 			break;
 		case 3 :
 			font_label.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BD_CARTOON_20));
 			font_label.isCustom = true;
 			font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BD_CARTOON_30));
 			font_pin.isCustom = true;
-			text_label_rect.origin.y = 54;
-			text_label_rect.size.h = 22;
-			text_pin_rect.size.h = 50;
-			text_pin_rect.origin.y = 78;
+			text_label_rect.origin.y = single_text_label_rect.origin.y + 4;
+			text_label_rect.size.h = single_text_label_rect.size.h - 14;
+			text_pin_rect.size.h = single_text_pin_rect.size.h;
+			text_pin_rect.origin.y = single_text_pin_rect.origin.y - 2;
 			break;
 		default :
 			font_style = 0;
@@ -310,10 +311,10 @@ void set_fonts(void) {
 			font_label.isCustom = true;
 			font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BITWISE_32));
 			font_pin.isCustom = true;
-			text_label_rect.origin.y = 50;
-			text_label_rect.size.h = 36;
-			text_pin_rect.size.h = 50;
-			text_pin_rect.origin.y = 80;
+			text_label_rect.origin.y = single_text_label_rect.origin.y;
+			text_label_rect.size.h = single_text_label_rect.size.h;
+			text_pin_rect.size.h = single_text_pin_rect.size.h;
+			text_pin_rect.origin.y = single_text_pin_rect.origin.y;
 			break;
 	}
 	text_layer_set_font(text_label_layer, font_label.font);
@@ -327,19 +328,22 @@ static void single_code_window_load(Window *window) {
 	Layer *window_layer = window_get_root_layer(single_code_main_window);
 	display_bounds = layer_get_frame(window_layer);
 
-	add_countdown_layer(window_layer);
+  Layer *countdown_layer = layer_create(display_bounds);
+  layer_add_child(window_layer, countdown_layer);
+	//add_countdown_layer(s_layer);
+  start_managing_countdown_layer(countdown_layer);
 	
-	text_label_rect = GRect(2, 50, display_bounds.size.w-2, 40);
+	text_label_rect = single_text_label_rect;
 	GRect text_label_start = text_label_rect;
 	text_label_start.origin.x = display_bounds.size.w;
 	text_label_layer = text_layer_create(text_label_start);
 	text_layer_set_background_color(text_label_layer, GColorClear);
-	text_layer_set_text_alignment(text_label_layer, GTextAlignmentLeft);
+	text_layer_set_text_alignment(text_label_layer, single_text_label_alignment);
 	text_layer_set_overflow_mode(text_label_layer, GTextOverflowModeWordWrap);
 	text_layer_set_text(text_label_layer, label_text);
 	layer_add_child(window_layer, text_layer_get_layer(text_label_layer));
 	
-	text_pin_rect = GRect(0, 80, display_bounds.size.w, 50);
+	text_pin_rect = single_text_pin_rect;
 	GRect text_pin_start = text_pin_rect;
 	text_pin_start.origin.x = display_bounds.size.w;
 	text_pin_layer = text_layer_create(text_pin_start);

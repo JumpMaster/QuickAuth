@@ -84,8 +84,4 @@ void request_delete(int key_id);
 void resetIdleTime();
 void switch_window_layout();
 void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *finish, int duration, AnimationStoppedHandler callback);
-void add_countdown_layer(struct Layer *window_layer);
-void set_countdown_layer_color(GColor color);
-void show_countdown_layer();
-void hide_countdown_layer();
 void move_key_position(unsigned int key_position, unsigned int new_position);
