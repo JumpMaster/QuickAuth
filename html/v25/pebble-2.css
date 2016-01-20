@@ -1,0 +1,45 @@
+.screenshot_holder {
+	background-image: url(assets/og/screenshot_holder_2.png);
+	padding-top: 104px;
+	height: 372px;
+	width: 236px;
+	background-repeat: no-repeat;
+}
+
+.font_1_screenshot {
+	background-image: url(assets/og/font_style_1.png);
+	height: 168px;
+	width: 144px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.font_2_screenshot {
+	background-image: url(assets/og/font_style_2.png);
+	height: 168px;
+	width: 144px;
+	margin-left: auto;
+	margin-right: auto;
+}
+.font_3_screenshot {
+	background-image: url(assets/og/font_style_3.png);
+	height: 168px;
+	width: 144px;
+	margin-left: auto;
+	margin-right: auto;
+}
+.font_4_screenshot {
+	background-image: url(assets/og/font_style_4.png);
+	height: 168px;
+	width: 144px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.multi_code_layout_screenshot {
+	background-image: url(assets/og/multi_code_layout.png);
+	height: 168px;
+	width: 144px;
+	margin-left: auto;
+	margin-right: auto;
+}
