@@ -3,7 +3,6 @@
 #include "multi_code_window.h"
 #include "google-authenticator.h"
 #include "select_window.h"
-#include "graphics.h"
 
 static GRect display_bounds;
 static MenuLayer *multi_code_menu_layer;
@@ -38,7 +37,7 @@ static void multi_code_menu_draw_row_callback(GContext *ctx, Layer *cell_layer, 
 }
 
 static int16_t multi_code_menu_get_cell_height_callback(struct MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
-	return multi_code_cell_height;
+	return MULTI_CODE_CELL_HEIGHT;
 }
 
 static void multi_code_menu_select_callback(struct MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
@@ -76,7 +75,7 @@ void multi_code_set_fonts(void) {
 	if (font_pin.isCustom)
 		fonts_unload_custom_font(font_pin.font);
 	
-	switch(font_style)
+	switch(font)
 	{
 		case 1 :
 			font_pin.font = fonts_get_system_font(FONT_KEY_BITHAM_34_MEDIUM_NUMBERS);
@@ -94,7 +93,7 @@ void multi_code_set_fonts(void) {
 			pin_origin_y = 2;
 			break;
 		default :
-			font_style = 0;
+			font = 0;
 			font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BITWISE_32));
 			font_pin.isCustom = true;
 			pin_origin_y = 0;
@@ -105,7 +104,7 @@ void multi_code_set_fonts(void) {
 
 void multi_code_apply_display_colors() {
 	window_set_background_color(multi_code_main_window, bg_color);
-  set_countdown_layer_color(fg_color);
+	set_countdown_layer_color(fg_color);
 	#ifdef PBL_COLOR
 		menu_layer_set_normal_colors(multi_code_menu_layer, bg_color, fg_color);
 	#endif
@@ -145,16 +144,7 @@ static void multi_code_window_load(Window *window) {
 	scroll_layer_set_shadow_hidden(menu_layer_get_scroll_layer(multi_code_menu_layer), true);
 	layer_add_child(window_layer, menu_layer_get_layer(multi_code_menu_layer));
 	menu_layer_set_selected_index(multi_code_menu_layer, MenuIndex(0, otp_selected), MenuRowAlignCenter, false);
-  
-  #if defined(PBL_ROUND)
-    menu_layer_set_center_focused(multi_code_menu_layer, true);
-  #endif
-	
-  Layer *countdown_layer = layer_create(display_bounds);
-  layer_add_child(window_layer, countdown_layer);
-	//add_countdown_layer(s_layer);
-  start_managing_countdown_layer(countdown_layer);
-  
+	add_countdown_layer(window_layer);
 	show_countdown_layer();
 	multi_code_apply_display_colors();
 }
@@ -177,8 +167,8 @@ void multi_code_window_push(void) {
 			.unload = multi_code_window_unload,
 		});
 	}
-	#ifdef PBL_SDK_2
-		window_set_fullscreen(multi_code_main_window, true);
-	#endif
+// 	#ifdef PBL_SDK_2
+// 		window_set_fullscreen(multi_code_main_window, true);
+// 	#endif
 	window_stack_push(multi_code_main_window, true);
 }

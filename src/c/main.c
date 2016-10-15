@@ -10,14 +10,15 @@
 #include "single_code_window.h"
 #include "multi_code_window.h"
 #include "ctype.h"
-#include "graphics.h"
 
 // Colors
 GColor bg_color;
 GColor fg_color;
+int bg_color_int;
+int fg_color_int;
 
 // Fonts
-unsigned int font_style;
+unsigned int font;
 AppFont font_pin;
 AppFont font_label;
 
@@ -25,6 +26,7 @@ bool fonts_changed;
 bool colors_changed;
 bool refresh_required;
 bool loading_complete;
+bool animate_countdown_layer;
 
 unsigned int js_message_retry_count = 0;
 unsigned int js_message_max_retry_count = 5;
@@ -45,16 +47,13 @@ unsigned int window_layout = 0;
 char otp_labels[MAX_OTP][MAX_LABEL_LENGTH];
 char otp_keys[MAX_OTP][MAX_KEY_LENGTH];
 
-#ifdef PBL_COLOR
-	char basalt_colors[13];
-#else
-	unsigned int aplite_theme = 0;  // 0 = Dark, 1 = Light
-#endif
+static TextLayer *countdown_layer;
+static GRect countdown_rect;
 
 // Functions requiring early declaration
 void request_key(int code_id);
 void send_key(int requested_key);
-void main_animate_second_counter(bool off_screen);
+void main_animate_second_counter(int seconds, bool off_screen);
 	
 void resetIdleTime() {
 	idle_second_count = 0;
@@ -288,7 +287,7 @@ void request_delete(int key_id) {
 	if (DEBUG)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Pebble Requesting delete: %s", otp_keys[key_id]);
 
-	sendJSMessage(MyTupletCString(JS_DELETE_KEY, otp_keys[key_id]));
+	sendJSMessage(MyTupletCString(MESSAGE_KEY_delete_key, otp_keys[key_id]));
 }
 
 void out_sent_handler(DictionaryIterator *sent, void *context) {
@@ -314,89 +313,27 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
 	}
 }
 
-#ifdef PBL_COLOR
-
-	unsigned int HexStringToUInt(char const* hexstring)
-	{
-		unsigned int result = 0;
-		char const *c = hexstring;
-		unsigned char thisC;
-
-		while( (thisC = *c) != 0 )
-		{
-			thisC = toupper(thisC);
-			result <<= 4;
-
-			if( isdigit(thisC))
-				result += thisC - '0';
-			else if(isxdigit(thisC))
-				result += thisC - 'A' + 10;
-			else
-			{
-				APP_LOG(APP_LOG_LEVEL_DEBUG, "ERROR: Unrecognised hex character \"%c\"", thisC);
-				return 0;
-			}
-			++c;
-		}
-		return result;  
-	}
-
-
-	void set_display_colors() {
-
-		char str_color1[7];
-		char str_color2[7];
-
-		if (strlen(basalt_colors) == 12) {
-			memcpy(str_color1, &basalt_colors[0], 6);
-			memcpy(str_color2, &basalt_colors[6], 6);
-			str_color1[6] = '\0';
-			str_color2[6] = '\0';
-		}
-		else
-			return;
-
-		int color1 = HexStringToUInt(str_color1);
-		int color2 = HexStringToUInt(str_color2);
-
-		bg_color = GColorFromHEX(color1);
-		fg_color = GColorFromHEX(color2);
-	}
-
-#else
-
-	void set_display_colors() { 
-		if (aplite_theme) {
-			bg_color = GColorWhite;
-			fg_color = GColorBlack;
-		} else {
-			bg_color = GColorBlack;
-			fg_color = GColorWhite;
-		}
-}
-	
-#endif
-
 static void in_received_handler(DictionaryIterator *iter, void *context) {
 	// Check for fields you expect to receive
 	if (DEBUG)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Message Received");
 	
 	resetIdleTime();
-	Tuple *key_count_tuple = dict_find(iter, JS_KEY_COUNT);
-	Tuple *key_tuple = dict_find(iter, JS_TRANSMIT_KEY);
-	Tuple *timezone_tuple = dict_find(iter, JS_TIMEZONE);
-	Tuple *key_delete_tuple = dict_find(iter, JS_DELETE_KEY);
-	Tuple *font_style_tuple = dict_find(iter, JS_FONT_STYLE);
-	Tuple *delete_all_tuple = dict_find(iter, JS_DELETE_ALL);
-	Tuple *idle_timeout_tuple = dict_find(iter, JS_IDLE_TIMEOUT);
-	Tuple *key_request_tuple = dict_find(iter, JS_REQUEST_KEY);
-	Tuple *window_layout_tuple = dict_find(iter, JS_WINDOW_LAYOUT);
+	Tuple *key_count_tuple = dict_find(iter, MESSAGE_KEY_key_count);
+	Tuple *key_tuple = dict_find(iter, MESSAGE_KEY_transmit_key);
+	Tuple *timezone_tuple = dict_find(iter, MESSAGE_KEY_timezone);
+	Tuple *key_delete_tuple = dict_find(iter, MESSAGE_KEY_delete_key);
+	Tuple *font_tuple = dict_find(iter, MESSAGE_KEY_font);
+	Tuple *delete_all_tuple = dict_find(iter, MESSAGE_KEY_delete_all);
+	Tuple *idle_timeout_tuple = dict_find(iter, MESSAGE_KEY_idle_timeout);
+	Tuple *key_request_tuple = dict_find(iter, MESSAGE_KEY_request_key);
+	Tuple *window_layout_tuple = dict_find(iter, MESSAGE_KEY_window_layout);
 	
 	#ifdef PBL_COLOR
-		Tuple *basalt_colors_tuple = dict_find(iter, JS_BASALT_COLORS);
+		Tuple *foreground_color_tuple = dict_find(iter, MESSAGE_KEY_foreground_color);
+		Tuple *background_color_tuple = dict_find(iter, MESSAGE_KEY_background_color);
 	#else
-		Tuple *aplite_theme_tuple = dict_find(iter, JS_THEME);
+		Tuple *theme_tuple = dict_find(iter, MESSAGE_KEY_theme);
 	#endif
 	
 	// Act on the found fields received
@@ -486,51 +423,61 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
 			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Timezone Offset: %d", timezone_offset);
 	} // timezone_tuple
 
+  int fg_color_value = fg_color_int;
+  int bg_color_value = bg_color_int;
+  
 	#ifdef PBL_COLOR
-		
-		if (basalt_colors_tuple) {
-			char basalt_colors_value[13];
-			memcpy(basalt_colors_value, basalt_colors_tuple->value->cstring, basalt_colors_tuple->length);
-		
-			if (strcmp(basalt_colors, basalt_colors_value) != 0) {
-				memcpy(basalt_colors, basalt_colors_value, 13);
-				if (DEBUG)
-					APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: basalt_colors: %s", basalt_colors);
-				persist_write_string(PS_BASALT_COLORS, basalt_colors);
-				set_display_colors();
-				update_screen_colors();
-			}		
-		} // basalt_colors_tuple
-	
-	#else
 
-		if (aplite_theme_tuple) {
-			unsigned int aplite_theme_value = aplite_theme_tuple->value->int16;
-			if (aplite_theme != aplite_theme_value) {
-				aplite_theme = aplite_theme_value;
-				persist_write_int(PS_APLITE_THEME, aplite_theme);
-				set_display_colors();
-				update_screen_colors();
-				if (DEBUG)
-					APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Theme: %d", aplite_theme);
-			}
-		} // aplite_theme_tuple
+  if (foreground_color_tuple) {
+    fg_color_value = foreground_color_tuple->value->int16;
+  }
+
+  if (background_color_tuple) {
+    bg_color_value = background_color_tuple->value->int16;
+  }
+
+
+  #else
+
+  if (theme_tuple) {
+    unsigned int theme_value = theme_tuple->value->int16;
+
+    if (theme_value == 1) {
+      bg_color_value = 0;
+      fg_color_value = 0;
+    } else {
+      bg_color_value = 10;
+      fg_color_value = 50;
+    }
+  } // theme_tuple
+
+  #endif
+
+
+
+if (fg_color_value != fg_color_int || bg_color_value != bg_color_int) {
+  fg_color_int = fg_color_value;
+  bg_color_int = bg_color_value;
+  persist_write_int(PS_FOREGROUND_COLOR, fg_color_int);
+  persist_write_int(PS_BACKGROUND_COLOR, bg_color_int);
+  fg_color = GColorFromHEX(fg_color_int);
+  bg_color = GColorFromHEX(bg_color_int);
+  update_screen_colors();
+}
+
+	if (font_tuple) {
+		unsigned int font_value = font_tuple->value->int16;
+    if (font != font_value) {
+      font = font_value;
+      persist_write_int(PS_FONT, font);
+      update_screen_fonts();
+    }
+    if (DEBUG)
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Font : %d", font);
+  } // font_tuple
 	
-	#endif
-	
-	if (font_style_tuple) {
-		unsigned int font_style_value = font_style_tuple->value->int16;
-		if (font_style != font_style_value) {
-			font_style = font_style_value;
-			persist_write_int(PS_FONT_STYLE, font_style);
-			update_screen_fonts();
-		}
-		if (DEBUG)
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Font style: %d", font_style);
-	} // font_style_tuple
-	
-	if (window_layout_tuple) {
-		unsigned int window_layout_value = window_layout_tuple->value->int16;
+if (window_layout_tuple) {
+  unsigned int window_layout_value = window_layout_tuple->value->int16;
 
 		if (window_layout != window_layout_value) {
 			window_layout = window_layout_value;
@@ -573,7 +520,7 @@ void request_key(int code_id) {
 	if (DEBUG)
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: Requesting code: %d", code_id);
 
-	sendJSMessage(TupletInteger(JS_REQUEST_KEY, code_id));
+	sendJSMessage(TupletInteger(MESSAGE_KEY_request_key, code_id));
 }
 
 void send_key(int requested_key) {
@@ -591,23 +538,25 @@ void send_key(int requested_key) {
 	else
 		strcat(keylabelpair,"NULL");
 
-	sendJSMessage(MyTupletCString(JS_TRANSMIT_KEY, keylabelpair));
+	sendJSMessage(MyTupletCString(MESSAGE_KEY_transmit_key, keylabelpair));
 }
 
 void load_persistent_data() {	
 	timezone_offset = persist_exists(PS_TIMEZONE_KEY) ? persist_read_int(PS_TIMEZONE_KEY) : 0;
-	
-	#ifdef PBL_COLOR
-		if (persist_exists(PS_BASALT_COLORS))
-			persist_read_string(PS_BASALT_COLORS, basalt_colors, 13);
-		else
-			memcpy(basalt_colors, "0000FFFFFFFF"+'\0', 13);
-	#else
-		aplite_theme = persist_exists(PS_APLITE_THEME) ? persist_read_int(PS_APLITE_THEME) : 0;
-	#endif
-		
+
+  #ifdef PBL_COLOR
+  fg_color_int = persist_exists(PS_FOREGROUND_COLOR) ? persist_read_int(PS_FOREGROUND_COLOR) : 16777215;
+  bg_color_int = persist_exists(PS_BACKGROUND_COLOR) ? persist_read_int(PS_BACKGROUND_COLOR) : 255;
+  #else
+  fg_color_int = persist_exists(PS_FOREGROUND_COLOR) ? persist_read_int(PS_FOREGROUND_COLOR) : 16777215;
+  bg_color_int = persist_exists(PS_BACKGROUND_COLOR) ? persist_read_int(PS_BACKGROUND_COLOR) : 0;
+  #endif
+  
+  fg_color = GColorFromHEX(fg_color_int);
+  bg_color = GColorFromHEX(bg_color_int);
+  
 	otp_default = persist_exists(PS_DEFAULT_KEY) ? persist_read_int(PS_DEFAULT_KEY) : 0;
-	font_style = persist_exists(PS_FONT_STYLE) ? persist_read_int(PS_FONT_STYLE) : 0;
+	font = persist_exists(PS_FONT) ? persist_read_int(PS_FONT) : 0;
 	idle_timeout = persist_exists(PS_IDLE_TIMEOUT) ? persist_read_int(PS_IDLE_TIMEOUT) : 300;
 	window_layout = persist_exists(PS_WINDOW_LAYOUT) ? persist_read_int(PS_WINDOW_LAYOUT) : 0;
 	
@@ -637,6 +586,67 @@ void load_persistent_data() {
 	otp_selected = otp_default;
 }
 
+void show_countdown_layer() {
+	animate_countdown_layer = true;
+}
+
+void hide_countdown_layer() {
+	animate_countdown_layer = false;
+	main_animate_second_counter(0, true);
+}
+
+void set_countdown_layer_color(GColor color) {
+	text_layer_set_background_color(countdown_layer, color);
+}
+
+void add_countdown_layer(Layer * window_layer) {
+	GRect display_bounds = layer_get_frame(window_layer);
+	countdown_rect = (GRect(0, display_bounds.size.h-10, display_bounds.size.w, 10));
+	GRect countdown_start = countdown_rect;
+	countdown_start.size.w = 0;
+	if (countdown_layer) {
+		if (layer_get_window(text_layer_get_layer(countdown_layer))) {
+			layer_remove_from_parent(text_layer_get_layer(countdown_layer));
+			layer_set_frame(text_layer_get_layer(countdown_layer), countdown_start);
+		}
+	} else {
+		countdown_layer = text_layer_create(countdown_start);
+	}
+	text_layer_set_background_color(countdown_layer, fg_color);
+	layer_add_child(window_layer, text_layer_get_layer(countdown_layer));
+}
+
+void main_animate_second_counter(int seconds, bool off_screen) {
+
+	int reverse_seconds = 30-(seconds%30);
+	
+	// update countdown layer
+	GRect start = layer_get_frame(text_layer_get_layer(countdown_layer));
+	GRect finish = countdown_rect;
+	// finish.size.w = ((float)4.8) * reverse_seconds; // 4.8 == Pebble screen width / 30
+	finish.size.w = (24 * reverse_seconds) / 5; // Same result as the above line but it avoids floats so is Pebble friendly.
+
+	#ifdef PBL_COLOR
+		if (reverse_seconds <= 6) {
+			if (reverse_seconds % 2 == 0)
+				text_layer_set_background_color(countdown_layer, GColorRed);
+			else
+				text_layer_set_background_color(countdown_layer, fg_color);
+		}
+	#endif
+
+	if (off_screen) {
+		finish.origin.y = 168; // Pebble screen height
+		finish.size.w = 0;
+		animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, NULL);
+	} else {
+		if (reverse_seconds % 30 == 0)
+			animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, NULL);
+		else
+			animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, 900, NULL);
+	}
+}
+
 static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 	
 	if (idle_timeout > 0) {
@@ -651,6 +661,9 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 			idle_second_count += 1;
 	}
 	
+	if (animate_countdown_layer)
+		main_animate_second_counter(tick_time->tm_sec, false);
+	
 	if (window_layout == 1)
 		multi_code_window_second_tick(tick_time->tm_sec);
 	else
@@ -659,8 +672,6 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 
 void handle_init(void) {
 	load_persistent_data();
-  initialise_veriables();
-	set_display_colors();
 	tick_timer_service_subscribe(SECOND_UNIT, &handle_second_tick);
 	
 	app_message_register_inbox_received(in_received_handler);
@@ -684,8 +695,8 @@ void handle_deinit(void) {
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: EXITING");
 
 	tick_timer_service_unsubscribe();
-  stop_managing_countdown_layer();
 	animation_unschedule_all();
+	text_layer_destroy(countdown_layer);
 	
 	if (window_layout == 1)
 		multi_code_window_remove();

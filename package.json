@@ -1,0 +1,118 @@
+{
+    "author": "Kevin Cooper",
+    "dependencies": {
+        "pebble-clay": "^1.0.0"
+    },
+    "keywords": [],
+    "name": "quickauth",
+    "pebble": {
+        "capabilities": [
+            "configurable"
+        ],
+        "displayName": "QuickAuth",
+        "enableMultiJS": true,
+        "messageKeys": [
+            "key_count",
+            "request_key",
+            "transmit_key",
+            "timezone",
+            "show_message",
+            "theme",
+            "delete_key",
+            "font",
+            "delete_all",
+            "idle_timeout",
+            "theme_colors",
+            "window_layout",
+            "background_color",
+            "foreground_color"
+        ],
+        "projectType": "native",
+        "resources": {
+            "media": [
+                {
+                    "file": "images/SimpleFadeTop.png",
+                    "name": "IMAGE_SIMPLE_FADE_TOP",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "characterRegex": "[0-9]",
+                    "file": "fonts/DS-DIGIB.TTF",
+                    "name": "FONT_DIGITAL_42",
+                    "type": "font"
+                },
+                {
+                    "file": "fonts/DS-DIGIB.TTF",
+                    "name": "FONT_DIGITAL_30",
+                    "type": "font"
+                },
+                {
+                    "file": "fonts/ORBITRON_28.ttf",
+                    "name": "FONT_ORBITRON_28",
+                    "type": "font"
+                },
+                {
+                    "file": "fonts/UNISPACE_20.ttf",
+                    "name": "FONT_UNISPACE_20",
+                    "type": "font"
+                },
+                {
+                    "file": "images/Padlock_aplite.png",
+                    "name": "IMAGE_PADLOCK",
+                    "type": "png"
+                },
+                {
+                    "file": "images/Pebble_Bin.png",
+                    "name": "PNG_IMAGE_ICON_TRASH",
+                    "type": "png"
+                },
+                {
+                    "file": "images/Pebble_Star2.png",
+                    "name": "PNG_IMAGE_ICON_STAR",
+                    "type": "png"
+                },
+                {
+                    "characterRegex": "[0-9]",
+                    "file": "fonts/BD_Cartoon_Shout.ttf",
+                    "name": "FONT_BD_CARTOON_30",
+                    "type": "font"
+                },
+                {
+                    "file": "fonts/BD_Cartoon_Shout.ttf",
+                    "name": "FONT_BD_CARTOON_20",
+                    "type": "font"
+                },
+                {
+                    "file": "fonts/BITWISE_32.ttf",
+                    "name": "FONT_BITWISE_32",
+                    "type": "font"
+                },
+                {
+                    "file": "images/auth_icon.png",
+                    "menuIcon": true,
+                    "name": "IMAGE_ICON",
+                    "type": "png"
+                },
+                {
+                    "file": "images/SimpleFadeBottom.png",
+                    "name": "IMAGE_SIMPLE_FADE_BOTTOM",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                }
+            ]
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "aplite",
+            "basalt",
+            "chalk",
+            "diorite"
+        ],
+        "uuid": "1f4d9835-3b9a-4ddd-907e-41a25d06f19c",
+        "watchapp": {
+            "watchface": false
+        }
+    },
+    "version": "3.0.0"
+}

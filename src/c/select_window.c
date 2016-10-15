@@ -59,11 +59,11 @@ static void select_menu_draw_row_callback(GContext *ctx, Layer *cell_layer, Menu
 		else
 			menu_cell_basic_draw(ctx, cell_layer, otp_labels[cell_index->row], NULL, NULL);
 
-		#ifdef PBL_PLATFORM_APLITE
-			graphics_context_set_compositing_mode(ctx, GCompOpClear);
-		#elif PBL_PLATFORM_BASALT
+// 		#ifdef PBL_PLATFORM_APLITE
+// 			graphics_context_set_compositing_mode(ctx, GCompOpClear);
+// 		#elif PBL_PLATFORM_BASALT
 			graphics_context_set_compositing_mode(ctx, GCompOpSet);
-		#endif
+// 		#endif
 		
 		if (cell_index->row == (selected_index-1))
 			graphics_draw_bitmap_in_rect(ctx, shadow_top, GRect(0, bounds.size.h-SHADOW_HEIGHT, 144, SHADOW_HEIGHT));
@@ -134,13 +134,13 @@ static void select_window_load(Window *window) {
 	scroll_layer_set_shadow_hidden(menu_layer_get_scroll_layer(select_menu_layer), true);
 	layer_add_child(window_layer, menu_layer_get_layer(select_menu_layer));
 	
-	#ifdef PBL_PLATFORM_APLITE
-		shadow_top = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIMPLE_FADE_TOP_BLACK);
-		shadow_bottom = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIMPLE_FADE_BOTTOM_BLACK);
-	#elif PBL_PLATFORM_BASALT
+// 	#ifdef PBL_PLATFORM_APLITE
+// 		shadow_top = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIMPLE_FADE_TOP_BLACK);
+// 		shadow_bottom = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIMPLE_FADE_BOTTOM_BLACK);
+// 	#elif PBL_PLATFORM_BASALT
 		shadow_top = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIMPLE_FADE_TOP);
 		shadow_bottom = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SIMPLE_FADE_BOTTOM);
-	#endif
+// 	#endif
 }
 
 void select_window_unload(Window *window) {
@@ -154,9 +154,9 @@ void push_select_window(int key_id) {
 	selected_index = key_id;
 	select_window = window_create();
 
-	#ifdef PBL_SDK_2
-		window_set_fullscreen(select_window, true);
-	#endif
+// 	#ifdef PBL_SDK_2
+// 		window_set_fullscreen(select_window, true);
+// 	#endif
 
 	window_set_window_handlers(select_window, (WindowHandlers) {
 		.load = select_window_load,

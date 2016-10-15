@@ -10,7 +10,6 @@
 #include "select_window.h"
 #include "dod_window.h"
 
-
 static Window *dod_main_window;
 static TextLayer *dod_label_layer;
 static BitmapLayer *dod_icon_layer;
@@ -53,22 +52,14 @@ static void window_load(Window *window) {
 	
 	
 	bitmap_layer_set_bitmap(dod_icon_layer, dod_icon_bitmap);
-	#ifdef PBL_PLATFORM_APLITE
-		bitmap_layer_set_compositing_mode(dod_icon_layer, GCompOpAssign);
-	#elif PBL_PLATFORM_BASALT
-		bitmap_layer_set_compositing_mode(dod_icon_layer, GCompOpSet);
-	#endif
+  bitmap_layer_set_compositing_mode(dod_icon_layer, GCompOpSet);
 	
 	layer_add_child(window_layer, bitmap_layer_get_layer(dod_icon_layer));
 
 	dod_label_layer = text_layer_create(GRect(10, 15 + bitmap_bounds.size.h + 5, 124 - ACTION_BAR_WIDTH, bounds.size.h - (10 + bitmap_bounds.size.h + 15)));
 	text_layer_set_text(dod_label_layer, DIALOG_CHOICE_WINDOW_MESSAGE);
 	
-	#ifdef PBL_COLOR
-		text_layer_set_text_color(dod_label_layer, fg_color);
-	#else
-		text_layer_set_text_color(dod_label_layer, GColorBlack);
-	#endif
+  text_layer_set_text_color(dod_label_layer, COLOR_FALLBACK(fg_color, GColorBlack));
 	
 	text_layer_set_background_color(dod_label_layer, GColorClear);
 	text_layer_set_text_alignment(dod_label_layer, GTextAlignmentCenter);
@@ -102,10 +93,6 @@ void dod_window_push(int key_id) {
 	if(!dod_main_window) {
 		s_key_id = key_id;
 		dod_main_window = window_create();
-
-		#ifdef PBL_SDK_2
-			window_set_fullscreen(dod_main_window, true);
-		#endif
 			
 		window_set_background_color(dod_main_window, COLOR_FALLBACK(bg_color, GColorWhite));
 
