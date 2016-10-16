@@ -20,12 +20,13 @@
             "theme",
             "delete_key",
             "font",
-            "delete_all",
             "idle_timeout",
             "theme_colors",
             "window_layout",
             "background_color",
-            "foreground_color"
+            "foreground_color",
+            "auth_name",
+            "auth_key"
         ],
         "projectType": "native",
         "resources": {
