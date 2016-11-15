@@ -26,7 +26,6 @@ bool fonts_changed;
 bool colors_changed;
 bool refresh_required;
 bool loading_complete;
-bool animate_countdown_layer;
 
 unsigned int js_message_retry_count = 0;
 unsigned int js_message_max_retry_count = 5;
@@ -46,9 +45,6 @@ unsigned int window_layout = 0;
 
 char otp_labels[MAX_OTP][MAX_LABEL_LENGTH];
 char otp_keys[MAX_OTP][MAX_KEY_LENGTH];
-
-static TextLayer *countdown_layer;
-static GRect countdown_rect;
 
 // Functions requiring early declaration
 void request_key(int code_id);
@@ -137,6 +133,7 @@ void on_animation_stopped(Animation *anim, bool finished, void *context) {
   property_animation_destroy((PropertyAnimation*) anim);
   anim = NULL;
 }
+
 void animate_layer(Layer *layer, AnimationCurve curve, GRect *start, GRect *finish, int duration, AnimationStoppedHandler callback) {
   //Declare animation
   PropertyAnimation *anim = property_animation_create_layer_frame(layer, start, finish);
@@ -554,37 +551,7 @@ void load_persistent_data() {
 
   otp_selected = otp_default;
 }
-
-void show_countdown_layer() {
-  animate_countdown_layer = true;
-}
-
-void hide_countdown_layer() {
-  animate_countdown_layer = false;
-  main_animate_second_counter(0, true);
-}
-
-void set_countdown_layer_color(GColor color) {
-  text_layer_set_background_color(countdown_layer, color);
-}
-
-void add_countdown_layer(Layer * window_layer) {
-  GRect display_bounds = layer_get_frame(window_layer);
-  countdown_rect = (GRect(0, display_bounds.size.h-10, display_bounds.size.w, 10));
-  GRect countdown_start = countdown_rect;
-  countdown_start.size.w = 0;
-  if (countdown_layer) {
-    if (layer_get_window(text_layer_get_layer(countdown_layer))) {
-      layer_remove_from_parent(text_layer_get_layer(countdown_layer));
-      layer_set_frame(text_layer_get_layer(countdown_layer), countdown_start);
-    }
-  } else {
-    countdown_layer = text_layer_create(countdown_start);
-  }
-  text_layer_set_background_color(countdown_layer, fg_color);
-  layer_add_child(window_layer, text_layer_get_layer(countdown_layer));
-}
-
+/*
 void main_animate_second_counter(int seconds, bool off_screen) {
 
   int reverse_seconds = 30-(seconds%30);
@@ -615,7 +582,7 @@ void main_animate_second_counter(int seconds, bool off_screen) {
       animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, 900, NULL);
   }
 }
-
+*/
 static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 
   if (idle_timeout > 0) {
@@ -629,9 +596,6 @@ static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
     else
       idle_second_count += 1;
   }
-
-  if (animate_countdown_layer)
-    main_animate_second_counter(tick_time->tm_sec, false);
 
   if (window_layout == 1)
     multi_code_window_second_tick(tick_time->tm_sec);
@@ -665,7 +629,6 @@ void handle_deinit(void) {
 
   tick_timer_service_unsubscribe();
   animation_unschedule_all();
-  text_layer_destroy(countdown_layer);
 
   if (window_layout == 1)
     multi_code_window_remove();

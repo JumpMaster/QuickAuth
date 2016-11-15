@@ -3,12 +3,14 @@
 #include "main.h"
 #include "select_window.h"
 #include "google-authenticator.h"
+#include "display.h"
 
 // Main Window
 static Window *single_code_main_window;
 static TextLayer *text_pin_layer;
 static TextLayer *text_label_layer;
 static TextLayer *swipe_layer;
+static Layer *single_code_graphics_layer;
 
 static GRect text_pin_rect;
 static GRect text_label_rect;
@@ -20,6 +22,23 @@ unsigned int animation_count = 0;
 
 char label_text[MAX_LABEL_LENGTH];
 char pin_text[MAX_KEY_LENGTH];
+
+AppTimer *single_code_graphics_timer;
+bool single_code_exiting = false;
+
+int single_code_countdown_size = 0;
+
+void single_code_refresh_callback(void *data) {
+  if (!single_code_exiting)
+    layer_mark_dirty(single_code_graphics_layer);
+}
+
+static void update_graphics(Layer *layer, GContext *ctx) {
+  draw_countdown_graphic(&layer, &ctx, &single_code_countdown_size);                               
+  if (!single_code_exiting)
+    single_code_graphics_timer = app_timer_register(30, (AppTimerCallback) single_code_refresh_callback, NULL);
+}
+
 
 // Functions requiring early declaration
 void animation_control(void);
@@ -148,7 +167,7 @@ void animation_control(void) {
 				set_fonts();
 			animate_code_on();
 			animate_label_on();
-			show_countdown_layer();
+// 			show_countdown_layer();
 			break;
 		case 20: // animate the code off screen
 			animation_state = 30;
@@ -171,7 +190,7 @@ void animation_control(void) {
 			animation_unschedule_all();
 			animation_count = 1;
 			animation_direction = RIGHT;
-			hide_countdown_layer();
+// 			hide_countdown_layer();
 			animate_code_off();
 			animate_label_off();
 			break;
@@ -260,7 +279,7 @@ void window_config_provider(Window *window) {
 
 void apply_display_colors() {
 	window_set_background_color(single_code_main_window, bg_color);
-	set_countdown_layer_color(fg_color);
+// 	set_countdown_layer_color(fg_color);
 	text_layer_set_text_color(text_label_layer, fg_color);
 	text_layer_set_text_color(text_pin_layer, fg_color);
 }
@@ -322,12 +341,11 @@ void set_fonts(void) {
 }
 	
 static void single_code_window_load(Window *window) {
+  single_code_exiting = false;
 	window_set_click_config_provider(single_code_main_window, (ClickConfigProvider) window_config_provider);
 	
 	Layer *window_layer = window_get_root_layer(single_code_main_window);
 	display_bounds = layer_get_frame(window_layer);
-
-	add_countdown_layer(window_layer);
 	
 	text_label_rect = GRect(2, 50, display_bounds.size.w-2, 40);
 	GRect text_label_start = text_label_rect;
@@ -348,6 +366,10 @@ static void single_code_window_load(Window *window) {
 	text_layer_set_text(text_pin_layer, pin_text);
 	layer_add_child(window_layer, text_layer_get_layer(text_pin_layer));
 	
+  single_code_graphics_layer = layer_create(display_bounds);
+  layer_set_update_proc(single_code_graphics_layer, update_graphics);
+  layer_add_child(window_layer, single_code_graphics_layer);
+  
 	apply_display_colors();
 	set_fonts();
 	loading_complete = true;
@@ -362,8 +384,11 @@ static void single_code_window_appear(Window *window) {
 }
 
 void single_code_window_unload(Window *window) {
+  single_code_exiting = true;
+  app_timer_cancel(single_code_graphics_timer);
 	text_layer_destroy(text_label_layer);
 	text_layer_destroy(text_pin_layer);
+  layer_destroy(single_code_graphics_layer);
 	window_destroy(single_code_main_window);
 	single_code_main_window = NULL;
 }
@@ -381,8 +406,6 @@ void single_code_window_push(void) {
 			.appear = single_code_window_appear,
 		});
 	}
-// 	#ifdef PBL_SDK_2
-// 		window_set_fullscreen(single_code_main_window, true);
-// 	#endif
+
 	window_stack_push(single_code_main_window, false);
 }

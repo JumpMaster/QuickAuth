@@ -3,12 +3,28 @@
 #include "multi_code_window.h"
 #include "google-authenticator.h"
 #include "select_window.h"
+#include "display.h"
 
 static GRect display_bounds;
 static MenuLayer *multi_code_menu_layer;
+static Layer *multi_code_graphics_layer;
 static Window *multi_code_main_window;
 int menu_cell_height = 0;
 int pin_origin_y = 0;
+bool multi_code_exiting = false;
+int multi_code_countdown_size = 0;
+AppTimer *multi_code_graphics_timer;
+
+void multi_code_refresh_callback(void *data) {
+  if (!multi_code_exiting)
+  	layer_mark_dirty(multi_code_graphics_layer);
+}
+
+static void update_graphics(Layer *layer, GContext *ctx) {
+  draw_countdown_graphic(&layer, &ctx, &multi_code_countdown_size);
+  if (!multi_code_exiting)
+    multi_code_graphics_timer = app_timer_register(30, (AppTimerCallback) multi_code_refresh_callback, NULL);
+}
 
 static uint16_t multi_code_menu_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *context) {
 	return watch_otp_count > 1 ? watch_otp_count : 1;
@@ -104,7 +120,7 @@ void multi_code_set_fonts(void) {
 
 void multi_code_apply_display_colors() {
 	window_set_background_color(multi_code_main_window, bg_color);
-	set_countdown_layer_color(fg_color);
+// 	set_countdown_layer_color(fg_color);
 	#ifdef PBL_COLOR
 		menu_layer_set_normal_colors(multi_code_menu_layer, bg_color, fg_color);
 	#endif
@@ -123,12 +139,15 @@ void multi_code_window_second_tick(int seconds) {
 }
 
 static void multi_code_window_load(Window *window) {
+  multi_code_exiting = false;
 	Layer *window_layer = window_get_root_layer(window);
 	display_bounds = layer_get_frame(window_layer);
 	multi_code_set_fonts();
 	GRect menu_bounds = layer_get_bounds(window_layer);
 	menu_bounds.size.h = (display_bounds.size.h - 10) - 2;
 	multi_code_menu_layer = menu_layer_create(menu_bounds);
+  multi_code_graphics_layer = layer_create(display_bounds);
+  layer_set_update_proc(multi_code_graphics_layer, update_graphics);
 	menu_layer_set_click_config_onto_window(multi_code_menu_layer, window);
 	menu_layer_set_callbacks(multi_code_menu_layer, NULL, (MenuLayerCallbacks) {
 		.get_num_rows = (MenuLayerGetNumberOfRowsInSectionsCallback)multi_code_menu_get_num_rows_callback,
@@ -143,14 +162,16 @@ static void multi_code_window_load(Window *window) {
 	});
 	scroll_layer_set_shadow_hidden(menu_layer_get_scroll_layer(multi_code_menu_layer), true);
 	layer_add_child(window_layer, menu_layer_get_layer(multi_code_menu_layer));
+	layer_add_child(window_layer, multi_code_graphics_layer);
 	menu_layer_set_selected_index(multi_code_menu_layer, MenuIndex(0, otp_selected), MenuRowAlignCenter, false);
-	add_countdown_layer(window_layer);
-	show_countdown_layer();
 	multi_code_apply_display_colors();
 }
 
 void multi_code_window_unload(Window *window) {
+  multi_code_exiting = true;
+  app_timer_cancel(multi_code_graphics_timer);
 	menu_layer_destroy(multi_code_menu_layer);
+  layer_destroy(multi_code_graphics_layer);
 	window_destroy(multi_code_main_window);
 	multi_code_main_window = NULL;
 }
@@ -167,8 +188,5 @@ void multi_code_window_push(void) {
 			.unload = multi_code_window_unload,
 		});
 	}
-// 	#ifdef PBL_SDK_2
-// 		window_set_fullscreen(multi_code_main_window, true);
-// 	#endif
 	window_stack_push(multi_code_main_window, true);
 }

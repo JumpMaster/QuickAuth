@@ -148,8 +148,10 @@ Pebble.addEventListener("ready", function(e) {
   // Send timezone, keycount, and colors to watch
   var dict = {};
   dict[keys.key_count] = otp_count;
-  dict[keys.foreground_color] = foreground_color;
-  dict[keys.background_color] = background_color;
+  if (foreground_color >= 0 && background_color >= 0) {
+    dict[keys.foreground_color] = foreground_color;
+    dict[keys.background_color] = background_color;
+  }
   dict[keys.timezone] = timezone_offset;
   dict[keys.font] = font;
   dict[keys.idle_timeout] = idle_timeout;
@@ -352,6 +354,9 @@ Pebble.addEventListener('webviewclosed', function(e) {
       if (debug)
         console.log("WARN: Too many codes..."+otp_count);
     }
+    
+    //clay.setSettings(keys.auth_name, "");
+    //clay.setSettings(keys.auth_key, "");
   }
   if (debug)
     console.log("INFO: Uploading config");

@@ -111,7 +111,7 @@ module.exports =
         "type": "select",
         "messageKey": "font",
         "label": "Font",
-        "defaultValue": "1",
+        "defaultValue": "0",
         "options": [
           { 
             "label": "Style 1", 
