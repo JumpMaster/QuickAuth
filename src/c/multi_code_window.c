@@ -21,7 +21,7 @@ void multi_code_refresh_callback(void *data) {
 }
 
 static void update_graphics(Layer *layer, GContext *ctx) {
-  draw_countdown_graphic(&layer, &ctx, &multi_code_countdown_size);
+  draw_countdown_graphic(&layer, &ctx, &multi_code_countdown_size, true);
   if (!multi_code_exiting)
     multi_code_graphics_timer = app_timer_register(30, (AppTimerCallback) multi_code_refresh_callback, NULL);
 }
@@ -146,8 +146,8 @@ static void multi_code_window_load(Window *window) {
 	GRect menu_bounds = layer_get_bounds(window_layer);
 	menu_bounds.size.h = (display_bounds.size.h - 10) - 2;
 	multi_code_menu_layer = menu_layer_create(menu_bounds);
-  multi_code_graphics_layer = layer_create(display_bounds);
-  layer_set_update_proc(multi_code_graphics_layer, update_graphics);
+	multi_code_graphics_layer = layer_create(display_bounds);
+	layer_set_update_proc(multi_code_graphics_layer, update_graphics);
 	menu_layer_set_click_config_onto_window(multi_code_menu_layer, window);
 	menu_layer_set_callbacks(multi_code_menu_layer, NULL, (MenuLayerCallbacks) {
 		.get_num_rows = (MenuLayerGetNumberOfRowsInSectionsCallback)multi_code_menu_get_num_rows_callback,

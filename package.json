@@ -32,35 +32,26 @@
         "resources": {
             "media": [
                 {
+                    "file": "images/auth_icon.png",
+                    "menuIcon": true,
+                    "name": "IMAGE_ICON",
+                    "type": "png"
+                },
+                {
                     "file": "images/SimpleFadeTop.png",
                     "name": "IMAGE_SIMPLE_FADE_TOP",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
-                    "characterRegex": "[0-9]",
-                    "file": "fonts/DS-DIGIB.TTF",
-                    "name": "FONT_DIGITAL_42",
-                    "type": "font"
+                    "file": "images/SimpleFadeBottom.png",
+                    "name": "IMAGE_SIMPLE_FADE_BOTTOM",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
                 },
                 {
-                    "file": "fonts/DS-DIGIB.TTF",
-                    "name": "FONT_DIGITAL_30",
-                    "type": "font"
-                },
-                {
-                    "file": "fonts/ORBITRON_28.ttf",
-                    "name": "FONT_ORBITRON_28",
-                    "type": "font"
-                },
-                {
-                    "file": "fonts/UNISPACE_20.ttf",
-                    "name": "FONT_UNISPACE_20",
-                    "type": "font"
-                },
-                {
-                    "file": "images/Padlock_aplite.png",
-                    "name": "IMAGE_PADLOCK",
+                    "file": "images/Pebble_Star2.png",
+                    "name": "PNG_IMAGE_ICON_STAR",
                     "type": "png"
                 },
                 {
@@ -69,19 +60,29 @@
                     "type": "png"
                 },
                 {
-                    "file": "images/Pebble_Star2.png",
-                    "name": "PNG_IMAGE_ICON_STAR",
+                    "file": "images/Padlock_aplite.png",
+                    "name": "IMAGE_PADLOCK",
                     "type": "png"
                 },
                 {
-                    "characterRegex": "[0-9]",
-                    "file": "fonts/BD_Cartoon_Shout.ttf",
-                    "name": "FONT_BD_CARTOON_30",
+                    "file": "fonts/UNISPACE_20.ttf",
+                    "name": "FONT_UNISPACE_20",
                     "type": "font"
                 },
                 {
-                    "file": "fonts/BD_Cartoon_Shout.ttf",
-                    "name": "FONT_BD_CARTOON_20",
+                    "file": "fonts/ORBITRON_28.ttf",
+                    "name": "FONT_ORBITRON_28",
+                    "type": "font"
+                },
+                {
+                    "file": "fonts/DS-DIGIB.TTF",
+                    "name": "FONT_DIGITAL_30",
+                    "type": "font"
+                },
+                {
+                    "characterRegex": "[0-9]",
+                    "file": "fonts/DS-DIGIB.TTF",
+                    "name": "FONT_DIGITAL_42",
                     "type": "font"
                 },
                 {
@@ -90,16 +91,15 @@
                     "type": "font"
                 },
                 {
-                    "file": "images/auth_icon.png",
-                    "menuIcon": true,
-                    "name": "IMAGE_ICON",
-                    "type": "png"
+                    "file": "fonts/BD_Cartoon_Shout.ttf",
+                    "name": "FONT_BD_CARTOON_20",
+                    "type": "font"
                 },
                 {
-                    "file": "images/SimpleFadeBottom.png",
-                    "name": "IMAGE_SIMPLE_FADE_BOTTOM",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
+                    "characterRegex": "[0-9]",
+                    "file": "fonts/BD_Cartoon_Shout.ttf",
+                    "name": "FONT_BD_CARTOON_30",
+                    "type": "font"
                 }
             ]
         },

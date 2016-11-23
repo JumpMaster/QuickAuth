@@ -4,34 +4,22 @@
 #include "display.h"
 #include "main.h"
 
-#define TIME_ANGLE(time) time * (TRIG_MAX_ANGLE / 60)
+#define TIME_ANGLE(time) time * (TRIG_MAX_ANGLE / 30000)
 
-void draw_countdown_graphic(Layer **layer, GContext **ctx, int *countdown_size) {
+uint16_t thickness = 0;
 
-  GRect display_bounds = layer_get_frame(*layer);
-  time_t temp = time(NULL);
-  struct tm *tick_time = localtime(&temp);
-  int seconds = ((30 - (tick_time->tm_sec % 30))*1000) - time_ms(NULL, NULL);
+void draw_countdown_graphic(Layer **layer, GContext **ctx, int *countdown_size, bool on_screen) {
+	time_t temp = time(NULL);
+	struct tm *tick_time = localtime(&temp);
+	int seconds = ((tick_time->tm_sec % 30)*1000) + time_ms(NULL, NULL);
 
-  uint32_t end_angle = TIME_ANGLE(seconds);
-  uint16_t thickness = 5;
-
-  if (end_angle == 0) {
-    graphics_fill_radial(*ctx,
-                         display_bounds,
-                         GOvalScaleModeFitCircle,
-                         thickness,
-                         0,
-                         TRIG_MAX_ANGLE);
-  } else {
-    graphics_fill_radial(*ctx,
-                         display_bounds,
-                         GOvalScaleModeFitCircle,
-                         thickness,
-                         0,
-                         end_angle);
-  }
-
+	if (on_screen && thickness != 7)
+		thickness++;
+	else if (!on_screen && thickness > 0)
+		thickness--;
+	
+	graphics_context_set_fill_color(*ctx, fg_color);
+	graphics_fill_radial(*ctx, layer_get_bounds(*layer), GOvalScaleModeFitCircle, thickness, 0, TIME_ANGLE(seconds));
 }
 
 #endif

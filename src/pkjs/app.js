@@ -79,6 +79,11 @@ function getWatchVersion() {
   return watch_version;
 }
 
+function clearSensitiveData() {
+	clay.setSettings("auth_name", "");
+	clay.setSettings("auth_key", "");
+}
+
 function loadLocalVariables() {
   otp_count = 0;
   for (var i=0; i<MAX_OTP_COUNT; i++)
@@ -139,7 +144,8 @@ function sendAppMessage(data) {
 Pebble.addEventListener("ready", function(e) {
   if (debug)
     console.log("INFO: JavaScript app ready and running!");
-
+	
+  clearSensitiveData();
   // localStorage should only be accessed are the "ready" event is fired
   loadLocalVariables();
 
@@ -354,12 +360,10 @@ Pebble.addEventListener('webviewclosed', function(e) {
       if (debug)
         console.log("WARN: Too many codes..."+otp_count);
     }
-    
-    //clay.setSettings(keys.auth_name, "");
-    //clay.setSettings(keys.auth_key, "");
   }
   if (debug)
     console.log("INFO: Uploading config");
+  clearSensitiveData();
   sendAppMessage(config);
 }
                        );
