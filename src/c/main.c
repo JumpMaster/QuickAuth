@@ -65,7 +65,7 @@ void update_screen_fonts(void) {
   refresh_screen();
 }
 
-void update_screen_colors(void) {
+void notify_color_change(void) {
   colors_changed = true;
   refresh_screen();
 }
@@ -418,9 +418,7 @@ static void in_received_handler(DictionaryIterator *iter, void *context) {
     }
     persist_write_int(PS_FOREGROUND_COLOR, fg_color_int);
     persist_write_int(PS_BACKGROUND_COLOR, bg_color_int);
-    fg_color = GColorFromHEX(fg_color_int);
-    bg_color = GColorFromHEX(bg_color_int);
-    update_screen_colors();
+    notify_color_change();
   }
 
   if (font_tuple) {
@@ -499,6 +497,11 @@ void send_key(int requested_key) {
   sendJSMessage(MyTupletCString(MESSAGE_KEY_transmit_key, keylabelpair));
 }
 
+void apply_new_colors() {
+	fg_color = GColorFromHEX(fg_color_int);
+	bg_color = GColorFromHEX(bg_color_int);
+}
+
 void set_default_colors() {
   #ifdef PBL_COLOR
   fg_color_int = 16777215;
@@ -517,9 +520,8 @@ void load_persistent_data() {
 
   if (fg_color_int < 0 || bg_color_int < 0)
     set_default_colors();
-  
-  fg_color = GColorFromHEX(fg_color_int);
-  bg_color = GColorFromHEX(bg_color_int);
+	
+  apply_new_colors();
 
   otp_default = persist_exists(PS_DEFAULT_KEY) ? persist_read_int(PS_DEFAULT_KEY) : 0;
   font = persist_exists(PS_FONT) ? persist_read_int(PS_FONT) : 0;
@@ -551,38 +553,7 @@ void load_persistent_data() {
 
   otp_selected = otp_default;
 }
-/*
-void main_animate_second_counter(int seconds, bool off_screen) {
 
-  int reverse_seconds = 30-(seconds%30);
-
-  // update countdown layer
-  GRect start = layer_get_frame(text_layer_get_layer(countdown_layer));
-  GRect finish = countdown_rect;
-  // finish.size.w = ((float)4.8) * reverse_seconds; // 4.8 == Pebble screen width / 30
-  finish.size.w = (24 * reverse_seconds) / 5; // Same result as the above line but it avoids floats so is Pebble friendly.
-
-  #ifdef PBL_COLOR
-  if (reverse_seconds <= 6) {
-    if (reverse_seconds % 2 == 0)
-      text_layer_set_background_color(countdown_layer, GColorRed);
-    else
-      text_layer_set_background_color(countdown_layer, fg_color);
-  }
-  #endif
-
-  if (off_screen) {
-    finish.origin.y = 168; // Pebble screen height
-    finish.size.w = 0;
-    animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, NULL);
-  } else {
-    if (reverse_seconds % 30 == 0)
-      animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveEaseInOut, &start, &finish, 900, NULL);
-    else
-      animate_layer(text_layer_get_layer(countdown_layer), AnimationCurveLinear, &start, &finish, 900, NULL);
-  }
-}
-*/
 static void handle_second_tick(struct tm *tick_time, TimeUnits units_changed) {
 
   if (idle_timeout > 0) {

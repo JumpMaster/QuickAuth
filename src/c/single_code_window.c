@@ -26,7 +26,6 @@ char pin_text[MAX_KEY_LENGTH];
 AppTimer *single_code_graphics_timer;
 bool single_code_exiting = false;
 
-int single_code_countdown_size = 0;
 bool countdown_layer_onscreen = false;
 
 void single_code_refresh_callback(void *data) {
@@ -35,7 +34,7 @@ void single_code_refresh_callback(void *data) {
 }
 
 static void update_graphics(Layer *layer, GContext *ctx) {
-	draw_countdown_graphic(&layer, &ctx, &single_code_countdown_size, countdown_layer_onscreen);                               
+	draw_countdown_graphic(&layer, &ctx, countdown_layer_onscreen);                               
 	if (!single_code_exiting)
 		single_code_graphics_timer = app_timer_register(30, (AppTimerCallback) single_code_refresh_callback, NULL);
 }
@@ -197,6 +196,7 @@ void animation_control(void) {
 		break;
 		case 60: // animate the swipe layer on screen using the background color
 		animation_state = 70;
+		apply_new_colors();
 		GRect start = GRect(0, display_bounds.size.h*-1, display_bounds.size.w, display_bounds.size.h);
 		swipe_layer = text_layer_create(start);
 		text_layer_set_background_color(swipe_layer, bg_color);
@@ -299,30 +299,18 @@ void set_fonts(void) {
 		font_label.isCustom = false;
 		font_pin.font = fonts_get_system_font(FONT_KEY_BITHAM_34_MEDIUM_NUMBERS);
 		font_pin.isCustom = false;
-		text_label_rect.origin.y = 55;
-		text_label_rect.size.h = 30;
-		text_pin_rect.size.h = 50;
-		text_pin_rect.origin.y = 76;
 		break;
 		case 2 :
 		font_label.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DIGITAL_30));
 		font_label.isCustom = true;
 		font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DIGITAL_42));
 		font_pin.isCustom = true;
-		text_label_rect.origin.y = 52;
-		text_label_rect.size.h = 40;
-		text_pin_rect.size.h = 50;
-		text_pin_rect.origin.y = 74;
 		break;
 		case 3 :
 		font_label.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BD_CARTOON_20));
 		font_label.isCustom = true;
 		font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BD_CARTOON_30));
 		font_pin.isCustom = true;
-		text_label_rect.origin.y = 54;
-		text_label_rect.size.h = 22;
-		text_pin_rect.size.h = 50;
-		text_pin_rect.origin.y = 78;
 		break;
 		default :
 		font = 0;
@@ -330,12 +318,9 @@ void set_fonts(void) {
 		font_label.isCustom = true;
 		font_pin.font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BITWISE_32));
 		font_pin.isCustom = true;
-		text_label_rect.origin.y = 50;
-		text_label_rect.size.h = 36;
-		text_pin_rect.size.h = 50;
-		text_pin_rect.origin.y = 80;
 		break;
 	}
+	set_textlayer_positions(font, &text_label_rect, &text_pin_rect);
 	text_layer_set_font(text_label_layer, font_label.font);
 	text_layer_set_font(text_pin_layer, font_pin.font);
 	fonts_changed = false;
@@ -348,17 +333,11 @@ static void single_code_window_load(Window *window) {
 	Layer *window_layer = window_get_root_layer(single_code_main_window);
 	display_bounds = layer_get_frame(window_layer);
 
-	text_label_rect = GRect(2, 50, display_bounds.size.w-2, 40);
-	GRect text_label_start = text_label_rect;
-	text_label_start.origin.x = display_bounds.size.w;
-	text_label_layer = text_layer_create(text_label_start);
-	text_layer_set_background_color(text_label_layer, GColorClear);
-	text_layer_set_text_alignment(text_label_layer, GTextAlignmentLeft);
-	text_layer_set_overflow_mode(text_label_layer, GTextOverflowModeWordWrap);
+	create_single_code_screen_elements(&window_layer, &text_label_rect, &text_pin_rect, &text_label_layer);
+
 	text_layer_set_text(text_label_layer, label_text);
 	layer_add_child(window_layer, text_layer_get_layer(text_label_layer));
 
-	text_pin_rect = GRect(0, 80, display_bounds.size.w, 50);
 	GRect text_pin_start = text_pin_rect;
 	text_pin_start.origin.x = display_bounds.size.w;
 	text_pin_layer = text_layer_create(text_pin_start);

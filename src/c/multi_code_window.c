@@ -12,7 +12,6 @@ static Window *multi_code_main_window;
 int menu_cell_height = 0;
 int pin_origin_y = 0;
 bool multi_code_exiting = false;
-int multi_code_countdown_size = 0;
 AppTimer *multi_code_graphics_timer;
 
 void multi_code_refresh_callback(void *data) {
@@ -21,7 +20,7 @@ void multi_code_refresh_callback(void *data) {
 }
 
 static void update_graphics(Layer *layer, GContext *ctx) {
-  draw_countdown_graphic(&layer, &ctx, &multi_code_countdown_size, true);
+  draw_countdown_graphic(&layer, &ctx, true);
   if (!multi_code_exiting)
     multi_code_graphics_timer = app_timer_register(30, (AppTimerCallback) multi_code_refresh_callback, NULL);
 }
@@ -119,6 +118,7 @@ void multi_code_set_fonts(void) {
 
 
 void multi_code_apply_display_colors() {
+	apply_new_colors();
 	window_set_background_color(multi_code_main_window, bg_color);
 // 	set_countdown_layer_color(fg_color);
 	#ifdef PBL_COLOR

@@ -13,12 +13,12 @@ typedef struct {
 	bool isCustom;
 } AppFont;
 
-#define MAX_OTP 16
+#define MAX_OTP 30
 #define MAX_LABEL_LENGTH 21 // 20 + termination
 #define MAX_KEY_LENGTH 129 // 128 + termination
 #define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
 #define APP_VERSION 30
-#define DEBUG true
+#define DEBUG false
 
 #define MyTupletCString(_key, _cstring) \
 ((const Tuplet) { .type = TUPLE_CSTRING, .key = _key, .cstring = { .data = _cstring, .length = strlen(_cstring) + 1 }})
@@ -32,7 +32,7 @@ enum {
 	PS_FOREGROUND_COLOR,
 	PS_BACKGROUND_COLOR,
 	PS_WINDOW_LAYOUT,
-	PS_SECRET = 0x40 // Needs 16 spaces, should always be last
+	PS_SECRET = 0x40 // Needs 30 spaces, should always be last
 };
 
 
@@ -74,3 +74,4 @@ void set_countdown_layer_color(GColor color);
 void show_countdown_layer();
 void hide_countdown_layer();
 void move_key_position(unsigned int key_position, unsigned int new_position);
+void apply_new_colors();
