@@ -6,7 +6,7 @@ var MAX_OTP_COUNT = 30;
 var MAX_LABEL_LENGTH = 20;
 var MAX_KEY_LENGTH = 128;
 var MAX_MESSAGE_RETRIES = 5;
-var APP_VERSION = 30;
+var APP_VERSION = 31;
 
 var otp_count = 0;
 var background_color = -1;
@@ -105,7 +105,7 @@ function loadLocalVariables() {
 
 	foreground_color = !foreground_color ? -1 : foreground_color;
 	background_color = !background_color ? -1 : background_color;
-	font = font >= 0 ? 0 : font;
+	font = !font ? 0 : font;
 	idle_timeout = !idle_timeout ? 300 : idle_timeout;
 	window_layout = !window_layout ? 0 : window_layout;
 }
