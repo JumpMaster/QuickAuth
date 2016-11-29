@@ -497,11 +497,6 @@ void send_key(int requested_key) {
   sendJSMessage(MyTupletCString(MESSAGE_KEY_transmit_key, keylabelpair));
 }
 
-void apply_new_colors() {
-	fg_color = GColorFromHEX(fg_color_int);
-	bg_color = GColorFromHEX(bg_color_int);
-}
-
 void set_default_colors() {
   #ifdef PBL_COLOR
   fg_color_int = 16777215;
@@ -510,6 +505,13 @@ void set_default_colors() {
   fg_color_int = 16777215;
   bg_color_int = 0;
   #endif
+}
+
+void apply_new_colors() {
+	if (fg_color_int < 0 || bg_color_int < 0)
+		set_default_colors();
+	fg_color = GColorFromHEX(fg_color_int);
+	bg_color = GColorFromHEX(bg_color_int);
 }
 
 void load_persistent_data() {	
@@ -583,7 +585,13 @@ void handle_init(void) {
   app_message_register_outbox_sent(out_sent_handler);
   app_message_register_outbox_failed(out_failed_handler);
 
-  app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());    //Largest possible input and output buffer size
+	#if defined(PBL_PLATFORM_APLITE)
+	int result = app_message_open(750, 750);
+	#else
+	int result = app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());    //Largest possible input and output buffer size
+	#endif
+	if (DEBUG)
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "APP_MESSAGE_OPEN: %d", result);
 
 
   if (window_layout == 1)

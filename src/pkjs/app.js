@@ -6,7 +6,7 @@ var MAX_OTP_COUNT = 30;
 var MAX_LABEL_LENGTH = 20;
 var MAX_KEY_LENGTH = 128;
 var MAX_MESSAGE_RETRIES = 5;
-var APP_VERSION = 31;
+var APP_VERSION = 32;
 
 var otp_count = 0;
 var background_color = -1;
