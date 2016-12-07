@@ -36,7 +36,7 @@ void single_code_refresh_callback(void *data) {
 static void update_graphics(Layer *layer, GContext *ctx) {
 	draw_countdown_graphic(&layer, &ctx, countdown_layer_onscreen);                               
 	if (!single_code_exiting)
-		single_code_graphics_timer = app_timer_register(30, (AppTimerCallback) single_code_refresh_callback, NULL);
+		single_code_graphics_timer = app_timer_register(countdown_refresh_time, (AppTimerCallback) single_code_refresh_callback, NULL);
 }
 
 

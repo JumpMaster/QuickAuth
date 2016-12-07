@@ -22,7 +22,7 @@ void multi_code_refresh_callback(void *data) {
 static void update_graphics(Layer *layer, GContext *ctx) {
   draw_countdown_graphic(&layer, &ctx, true);
   if (!multi_code_exiting)
-    multi_code_graphics_timer = app_timer_register(30, (AppTimerCallback) multi_code_refresh_callback, NULL);
+    multi_code_graphics_timer = app_timer_register(countdown_refresh_time, (AppTimerCallback) multi_code_refresh_callback, NULL);
 }
 
 static uint16_t multi_code_menu_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *context) {
@@ -31,16 +31,15 @@ static uint16_t multi_code_menu_get_num_rows_callback(MenuLayer *menu_layer, uin
 
 static void multi_code_menu_draw_row_callback(GContext *ctx, Layer *cell_layer, MenuIndex *cell_index, void *context) {
 	GRect bounds = layer_get_bounds(cell_layer);
+	
 	graphics_context_set_fill_color(ctx, bg_color);
 	graphics_context_set_text_color(ctx, fg_color);
 	
-	#ifdef PBL_COLOR
 	if (menu_cell_layer_is_highlighted(cell_layer)) {
 		graphics_context_set_fill_color(ctx, fg_color);
 		graphics_context_set_text_color(ctx, bg_color);
 		graphics_fill_rect(ctx, bounds, 0, 0);
 	}
-	#endif
 
 	if (watch_otp_count >= 1) {
 		graphics_draw_text(ctx, generateCode(otp_keys[cell_index->row], timezone_offset), font_pin.font, GRect(0, pin_origin_y, bounds.size.w, 30), GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
@@ -120,10 +119,7 @@ void multi_code_set_fonts(void) {
 void multi_code_apply_display_colors() {
 	apply_new_colors();
 	window_set_background_color(multi_code_main_window, bg_color);
-// 	set_countdown_layer_color(fg_color);
-	#ifdef PBL_COLOR
-		menu_layer_set_normal_colors(multi_code_menu_layer, bg_color, fg_color);
-	#endif
+	menu_layer_set_normal_colors(multi_code_menu_layer, bg_color, fg_color);
 }
 
 void multi_code_window_second_tick(int seconds) {
@@ -139,7 +135,7 @@ void multi_code_window_second_tick(int seconds) {
 }
 
 static void multi_code_window_load(Window *window) {
-  multi_code_exiting = false;
+	multi_code_exiting = false;
 	Layer *window_layer = window_get_root_layer(window);
 	display_bounds = layer_get_frame(window_layer);
 	multi_code_set_fonts();
@@ -148,7 +144,6 @@ static void multi_code_window_load(Window *window) {
 	multi_code_menu_layer = menu_layer_create(menu_bounds);
 	multi_code_graphics_layer = layer_create(display_bounds);
 	layer_set_update_proc(multi_code_graphics_layer, update_graphics);
-	menu_layer_set_click_config_onto_window(multi_code_menu_layer, window);
 	menu_layer_set_callbacks(multi_code_menu_layer, NULL, (MenuLayerCallbacks) {
 		.get_num_rows = (MenuLayerGetNumberOfRowsInSectionsCallback)multi_code_menu_get_num_rows_callback,
 		.draw_row = (MenuLayerDrawRowCallback)multi_code_menu_draw_row_callback,
@@ -160,6 +155,7 @@ static void multi_code_window_load(Window *window) {
 		.get_num_sections = (MenuLayerGetNumberOfSectionsCallback)multi_code_menu_get_num_sections_callback,
 		.selection_changed = (MenuLayerSelectionChangedCallback)multi_code_menu_selection_changed_callback,
 	});
+	menu_layer_set_click_config_onto_window(multi_code_menu_layer, window);
 	scroll_layer_set_shadow_hidden(menu_layer_get_scroll_layer(multi_code_menu_layer), true);
 	layer_add_child(window_layer, menu_layer_get_layer(multi_code_menu_layer));
 	layer_add_child(window_layer, multi_code_graphics_layer);
@@ -168,10 +164,10 @@ static void multi_code_window_load(Window *window) {
 }
 
 void multi_code_window_unload(Window *window) {
-  multi_code_exiting = true;
-  app_timer_cancel(multi_code_graphics_timer);
+	multi_code_exiting = true;
+	app_timer_cancel(multi_code_graphics_timer);
 	menu_layer_destroy(multi_code_menu_layer);
-  layer_destroy(multi_code_graphics_layer);
+	layer_destroy(multi_code_graphics_layer);
 	window_destroy(multi_code_main_window);
 	multi_code_main_window = NULL;
 }

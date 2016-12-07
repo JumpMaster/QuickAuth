@@ -17,7 +17,7 @@ typedef struct {
 #define MAX_LABEL_LENGTH 21 // 20 + termination
 #define MAX_KEY_LENGTH 129 // 128 + termination
 #define MAX_COMBINED_LENGTH MAX_LABEL_LENGTH+MAX_KEY_LENGTH
-#define APP_VERSION 32
+#define APP_VERSION 33
 #define DEBUG false
 
 #define MyTupletCString(_key, _cstring) \
@@ -58,7 +58,11 @@ extern unsigned int otp_selected;
 extern unsigned int otp_update_tick;
 extern unsigned int otp_updated_at_tick;
 extern int timezone_offset;
-
+#if defined(PBL_PLATFORM_APLITE)
+static unsigned int countdown_refresh_time = 60;
+#else
+static unsigned int countdown_refresh_time = 30;
+#endif
 extern bool loading_complete;
 extern bool refresh_required;
 extern bool fonts_changed;

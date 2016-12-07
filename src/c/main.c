@@ -510,6 +510,17 @@ void set_default_colors() {
 void apply_new_colors() {
 	if (fg_color_int < 0 || bg_color_int < 0)
 		set_default_colors();
+	
+	if (bg_color_int == fg_color_int) {
+// 		int intensity = (((bg_color_int & 0xFF000000) >> 24) + ((bg_color_int & 0x00FF0000) >> 16) + ((bg_color_int & 0x0000FF00) >> 8)) / 3;
+		int intensity = (((bg_color_int >> 16) & 0xff) + ((bg_color_int >> 8) & 0xff) + ((bg_color_int >> 0) & 0xff))/3;
+		APP_LOG(APP_LOG_LEVEL_DEBUG, "INFO: INTENSITY %d", intensity);
+		if (intensity <= 127)
+			fg_color_int = 16777215;
+		else
+			fg_color_int = 0;
+	}
+	
 	fg_color = GColorFromHEX(fg_color_int);
 	bg_color = GColorFromHEX(bg_color_int);
 }

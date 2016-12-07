@@ -6,7 +6,7 @@ var MAX_OTP_COUNT = 30;
 var MAX_LABEL_LENGTH = 20;
 var MAX_KEY_LENGTH = 128;
 var MAX_MESSAGE_RETRIES = 5;
-var APP_VERSION = 32;
+var APP_VERSION = 33;
 
 var otp_count = 0;
 var background_color = -1;
@@ -17,7 +17,7 @@ var idle_timeout = 0;
 var window_layout = -1;
 var message_send_retries = 0;
 var msg_data;
-var debug = true;
+var debug = false;
 var keys = require('message_keys');
 
 function checkKeyStringIsValid(key) {
